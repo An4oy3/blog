@@ -1,5 +1,9 @@
 package main.model;
 
+import lombok.Getter;
+import lombok.NonNull;
+import lombok.Setter;
+
 import javax.persistence.*;
 import java.util.Date;
 
@@ -7,94 +11,56 @@ import java.util.Date;
 @Table(name = "users")
 public class User {
 
-    @Column(nullable = false)
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Getter
+    @Setter
+    @NonNull
     private int id;
 
-    @Column(name = "is_moderator", nullable = false)
+    @Getter
+    @Setter
+    @NonNull
+    @Column(name = "is_moderator")
     private byte isModerator;
 
-    @Column(name = "reg_time", nullable = false)
+    @Getter
+    @Setter
+    @NonNull
+    @Column(name = "reg_time")
     private Date regTime;
 
-    @Column(nullable = false)
+    @Getter
+    @Setter
+    @NonNull
     private String name;
 
-    @Column(nullable = false)
+    @Getter
+    @Setter
+    @NonNull
     private String email;
 
-    @Column(nullable = false)
+    @Getter
+    @Setter
+    @NonNull
     private String password;
 
-
+    @Getter
+    @Setter
     private String code;
 
+    @Getter
+    @Setter
     private String photo;
+    //drop table captcha_codes,global_settings,post_comments,post_votes,posts,tag2post,tags,users;
+    //insert into users('id', 'is_moderator', 'reg_time', 'name', 'email', 'password') VALUES('1', '1', '2021-07-24', 'Федор', 'fedor@gmail.com', '123');
 
-    public int getId() {
-        return id;
-    }
-
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    public int getIs_moderator() {
-        return isModerator;
-    }
-
-    public void setIs_moderator(byte isModerator) {
-        this.isModerator = isModerator;
-    }
-
-    public Date getReg_time() {
-        return regTime;
-    }
-
-    public void setReg_time(Date regTime) {
-        this.regTime = regTime;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public String getCode() {
-        return code;
-    }
-
-    public void setCode(String code) {
-        this.code = code;
-    }
-
-    public String getPhoto() {
-        return photo;
-    }
-
-    public void setPhoto(String photo) {
-        this.photo = photo;
-    }
-
+//    insert into users('id','is_moderator', 'reg_time', 'name', 'email', 'password') VALUES('2', '0', '20210724', 'Петр', 'petya@gmail.com', '321');
+//    insert into posts('is_active', 'moderation_status', 'moderator_id', 'user_id', 'time', 'title', 'text', 'view_count') VALUES('1', 'NEW', '1', '1', '202107242207', 'Заголовок первого поста', 'Текст первого поста', '0');
+//    insert into post_comments('post_id', 'user_id', 'time', 'text') VALUES('1', '2', '202107242227', 'Первый комментарий');
+//    insert into tags('name') VALUES('Первый');
+//    insert into tags('name') VALUES('First post');
+//    insert into tag2post('post_id', 'tag_id') VALUES('1', '1');
+//    insert into tag2post('post_id', 'tag_id') VALUES('1', '2');
 
 }

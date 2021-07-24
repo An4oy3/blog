@@ -1,48 +1,33 @@
 package main.model;
 
+import lombok.Getter;
+import lombok.NonNull;
+import lombok.Setter;
+
 import javax.persistence.*;
 import java.util.List;
 
 @Entity
 @Table(name = "tags")
 public class Tag {
-    @Column(nullable = false)
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @NonNull
+    @Getter
+    @Setter
     private int id;
 
-    @Column(nullable = false)
+    @Getter
+    @Setter
+    @NonNull
     private String name;
 
+    @Getter
+    @Setter
     @ManyToMany(cascade = CascadeType.ALL)
     @JoinTable(name = "tag2post",
         joinColumns = {@JoinColumn(name = "tag_id")},
         inverseJoinColumns = {@JoinColumn(name = "post_id")})
     private List<Post> postList;
-
-
-
-    public int getId() {
-        return id;
-    }
-
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public List<Post> getPostList() {
-        return postList;
-    }
-
-    public void setPostList(List<Post> postList) {
-        this.postList = postList;
-    }
 }

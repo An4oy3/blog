@@ -5,31 +5,25 @@ import lombok.NonNull;
 import lombok.Setter;
 
 import javax.persistence.*;
-import java.util.Date;
 
 @Entity
-@Table(name = "captcha_codes")
-public class CaptchaCodes {
+public class Tag2Post {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Getter
-    @Setter
     @NonNull
     private int id;
 
     @Getter
     @Setter
     @NonNull
-    private Date time;
+    @Column(name = "post_id")
+    private int postId;
 
     @Getter
     @Setter
     @NonNull
-    private String code;
+    @Column(name = "tag_id")
+    private int tagId;
 
-    @Getter
-    @Setter
-    @NonNull
-    private String secret_code;
 }
