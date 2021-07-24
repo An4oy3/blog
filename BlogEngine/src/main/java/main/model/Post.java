@@ -1,101 +1,74 @@
 package main.model;
 
+import lombok.Getter;
+import lombok.NonNull;
+import lombok.Setter;
+
 import javax.persistence.*;
 import java.util.Date;
+import java.util.List;
 
 @Entity
 @Table(name = "posts")
 public class Post {
-    @Column(nullable = false)
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Getter
+    @Setter
+    @NonNull
     private int id;
 
-    @Column(nullable = false)
-    private byte is_active;
+    @Getter
+    @Setter
+    @NonNull
+    @Column(name = "is_active")
+    private byte isActive;
 
-    @Column(nullable = false)
+    @Getter
+    @Setter
+    @NonNull
+    @Column(name = "moderation_status")
     @Enumerated(EnumType.STRING)
-    private Moderation_status moderation_status;
+    private ModerationStatus moderationStatus;
 
-    @Column(name = "moderator_id")
-    private int moderatorId;
-
+    @Getter
+    @Setter
     @ManyToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "moderator_id")
+    private User moderatorId;
+
+    @Getter
+    @Setter
+    @NonNull
+    @ManyToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "user_id")
     private User userId;
 
-    @Column(nullable = false)
+    @Getter
+    @Setter
+    @NonNull
     private Date time;
 
-    @Column(nullable = false)
+    @Getter
+    @Setter
+    @NonNull
+    private String title;
+
+    @Getter
+    @Setter
+    @NonNull
     private String text;
 
-    @Column(name = "view_count", nullable = false)
+    @Getter
+    @Setter
+    @NonNull
+    @Column(name = "view_count")
     private int viewCount;
 
-
-    public int getId() {
-        return id;
-    }
-
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    public byte getIs_active() {
-        return is_active;
-    }
-
-    public void setIs_active(byte is_active) {
-        this.is_active = is_active;
-    }
-
-    public Moderation_status getModeration_status() {
-        return moderation_status;
-    }
-
-    public void setModeration_status(Moderation_status moderation_status) {
-        this.moderation_status = moderation_status;
-    }
-
-    public int getModeratorId() {
-        return moderatorId;
-    }
-
-    public void setModeratorId(int moderatorId) {
-        this.moderatorId = moderatorId;
-    }
-
-    public User getUserId() {
-        return userId;
-    }
-
-    public void setUserId(User userId) {
-        this.userId = userId;
-    }
-
-    public Date getTime() {
-        return time;
-    }
-
-    public void setTime(Date time) {
-        this.time = time;
-    }
-
-    public String getText() {
-        return text;
-    }
-
-    public void setText(String text) {
-        this.text = text;
-    }
-
-    public int getViewCount() {
-        return viewCount;
-    }
-
-    public void setViewCount(int viewCount) {
-        this.viewCount = viewCount;
-    }
+    @Getter
+    @Setter
+    @OneToMany(cascade = CascadeType.ALL)
+    @JoinColumn(name = "post_id")
+    private List<PostComments> comments;
 }
