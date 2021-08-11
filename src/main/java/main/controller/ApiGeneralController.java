@@ -1,5 +1,6 @@
 package main.controller;
 
+import main.model.request.Mode;
 import main.model.request.PostRequest;
 import main.model.request.TagRequest;
 import main.model.response.PostResponse;
@@ -10,6 +11,7 @@ import main.service.SettingsService;
 import main.service.TagService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import main.model.response.InitResponse;
 
@@ -40,13 +42,13 @@ public class ApiGeneralController {
     }
 
     @GetMapping("/api/post")
-    public PostResponse post(){
-        return postService.getPosts();
+    public PostResponse post(@RequestParam(value = "offset", defaultValue = "0") String offset, @RequestParam(value = "limit", defaultValue = "10") String limit, @RequestParam(value = "mode", defaultValue = "recent")String mode){
+        return postService.getPosts(offset, limit, mode);
     }
 
     @GetMapping("/api/tag")
-    public TagResponse tag(){
-        return tagService.getTags();
+    public TagResponse tag(@RequestParam(value = "query", defaultValue = "") String query){
+        return tagService.getTags(query);
     }
 
 
