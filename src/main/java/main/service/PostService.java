@@ -36,7 +36,7 @@ public class PostService {
         if(mode.equals("popular"))
             sort = Sort.by(Sort.Direction.DESC, "comments"); //Сортировка по кол-ву комментов
         else if(mode.equals("best"))
-            sort = Sort.by(Sort.Direction.DESC, "PostVote.likeCount"); //Как сортировать по лайкам, если такого поля у класса Пост нету??
+            sort = Sort.by(Sort.Direction.DESC, "votes"); //Как сортировать по лайкам, если такого поля у класса Пост нету??
         else if(mode.equals("early"))
             sort = Sort.by(Sort.Direction.DESC, "time"); //Сортировка по дате - от старых к новым
 
@@ -47,7 +47,6 @@ public class PostService {
             if(post.getIsActive() != 1 || post.getTime().compareTo(new Date()) != -1){ //если поле IsActive у поста не равно 1 или дата публикации позже текущей даты
                 continue;                                                              //Добавить проверку на статус модерации. Убрал, т.к. в БД нету постов с нужным статусом
             }
-
                 List<PostVote> postVotePage = postVoteRepository.findAllByPostId(post.getId()); //Получаем список оценок(лайки/дизлайки) к текущему посту
                 int likeCount = 0;
                 int dislikeCount = 0;
