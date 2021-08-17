@@ -51,6 +51,23 @@ public class ApiGeneralController {
         return tagService.getTags(query);
     }
 
+    /*==============================================================================================================================================================================================================================
+    Этап №3
+    Методы:
+        GET /api/post/search
+        GET /api/calendar
+        GET /api/post/byDate
+        GET /api/post/byTag
+        GET /api/post/{ID}
+        GET /api/auth/captcha - В контроллере ApiAuthController
+        POST /api/auth/register - В контроллере ApiPostController
+     */
+
+    @GetMapping("/api/post/search")
+    public PostResponse postSearch(@RequestParam(value = "offset") String offset, @RequestParam(value = "limit") String limit, @RequestParam(value = "query", defaultValue = "") String query){
+        return postService.getPostsSearch(offset, limit, query);
+    }
+
 
 
 }

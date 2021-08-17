@@ -11,6 +11,8 @@ spring:
     baselineOnMigrate: true
     validateOnMigrate: false
 
+
+
 blog:
   title: DevPub
   subtitle: Рассказы разработчиков
