@@ -1,31 +1,36 @@
 package main.service;
 
 import main.model.*;
+import main.model.response.CalendarResponse;
 import main.model.response.PostResponse;
 import main.model.response.PostBodyResponse;
 import main.model.response.UserBodyResponse;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.hibernate.Criteria;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.hibernate.boot.Metadata;
+import org.hibernate.boot.MetadataSources;
+import org.hibernate.boot.registry.StandardServiceRegistry;
+import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
+import org.hibernate.query.NativeQuery;
+import org.hibernate.query.Query;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.RequestParam;
 
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 @Service
 public class PostService {
     private final PostRepository postRepository;
-    private final PostVoteRepository postVoteRepository;
+    //private final PostVoteRepository postVoteRepository;
 
-    public PostService(PostRepository postRepository, PostVoteRepository postVoteRepository) {
+    public PostService(PostRepository postRepository) {
         this.postRepository = postRepository;
-        this.postVoteRepository = postVoteRepository;
     }
     //Этап 2. Метод GET /api/post
     public PostResponse getPosts(String offset, String limit, String mode){
@@ -96,7 +101,7 @@ public class PostService {
             boolean isMatched = false;
             for (String s : post.getTitle().split(" ")) {
                 for (String s1 : queryArr) {
-                    if(s.equals(s1)){
+                    if(s.equalsIgnoreCase(s1)){
                         isMatched = true;
                     }
                 }
@@ -134,8 +139,51 @@ public class PostService {
             postResponse.setPosts(postsResult);
             return postResponse;
         }
-        else
-           return getPosts(offset, limit, "recent");
+        else {
+            return getPosts(offset, limit, "recent");
+        }
+    }
+    //====================================
+
+    //Этап 3. Метод GET /api/calendar
+    public CalendarResponse getPostsByYear(String year){
+        CalendarResponse calendarResponse = new CalendarResponse();
+        //Проверяем корректность переданного параметра year
+        try {
+            int y = Integer.parseInt(year);
+        } catch (NumberFormatException e){
+           Calendar date = Calendar.getInstance();
+           int y = date.get(Calendar.YEAR);
+           year = String.valueOf(y); //если строка пустая или некорректная, то задаем текущий год.
+        }
+
+        //Открываем сессию, для передачи HQL-запроса
+        StandardServiceRegistry registry = new StandardServiceRegistryBuilder().configure("hibernate.cfg.xml").build();
+        Metadata metadata = new MetadataSources(registry).getMetadataBuilder().build();
+        SessionFactory sessionFactory = metadata.getSessionFactoryBuilder().build();
+        Session session = sessionFactory.openSession();
+
+        //SQL запрос для получения списка годов, за которые была хотя бы одна публикация
+        String queryYears = "select distinct year(posts.time) from posts";
+        List years = session.createSQLQuery(queryYears).list(); //Список всех годов, за которые делались публикации
+        calendarResponse.setYears(years);
+
+        Map<String, Integer> posts = new TreeMap<>(); // Мапа, которая будет добавлена в CalendarResponse. Параметр posts;
+
+        //Запрос на получение списка дат, в которые были опублекованы посты + группировка по этим датам.
+        String queryPostCount = "select time, count(*) FROM " + Post.class.getSimpleName() + " WHERE time > '" + year + "-01-01' AND time < '" + year + "-12-31' group by time";
+        //результат запроса.Таблица, где одна колонка список всех дат за указанный год, а вторая колонка кол-во постов размещенных в соответсвтвующую дату
+        List postCount = session.createQuery(queryPostCount).list();
+        for (int i = 0; i < postCount.size(); i++) {
+            //Одна колонка из списка результатов(Первый элемент массива - Дата, когда был опубликован пост. Второй элемент - кол-во постов, опубликованных в эту дату)
+            Object res[] = (Object[]) postCount.get(i);
+            String res1 = res[0].toString().substring(0, res[0].toString().indexOf(" ")); //Обрезаем дату к формату yyyy-mm-dd
+            posts.put(res1, Integer.parseInt(res[1].toString()));
+        }
+
+        calendarResponse.setPosts(posts);
+        sessionFactory.close();
+        return calendarResponse;
     }
     //====================================
 
