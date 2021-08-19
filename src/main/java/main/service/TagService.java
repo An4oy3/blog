@@ -1,6 +1,7 @@
 package main.service;
 
 import main.model.*;
+import main.model.response.TagBodyResponse;
 import main.model.response.TagResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -24,8 +25,7 @@ public class TagService {
 
 
     public TagResponse getTags(String query){
-        List<Map<String, Double>> resultList = new ArrayList<>();//Список, который будем возвращать(Внутри мапы по тегом в формате: Ключ - Имя тега, Значение - Нормированный вес тега)
-
+        List<TagBodyResponse> resultList = new ArrayList<>();//Список, который будем возвращать(Внутри обьекты с полями, которые запрашивает клиент(name, weight)
         Iterable<Tag> allTags = tagRepository.findAll();
         List<Tag> tagList = new ArrayList<>(); //Список всех тегов из БД
         for (Tag allTag : allTags) {
@@ -38,12 +38,12 @@ public class TagService {
         for (Tag currentTag : tagList) {
             double dWeightTag = (double) tag2PostRepository.findAllByTagId(currentTag.getId()).size()/postRepository.count();//Нормированный вес текущего тега(кол-во постов с данным тегом делим на общее кол-во постов)
             double weightTag = dWeightTag * k; //Получаем нормированый вес текущего тега
-            Map<String, Double> resultCurrentTag = new HashMap<>(); //Мапа с результатом по текущему тегу(Имя:Нормированный вес)
-            resultCurrentTag.put(currentTag.getName(), weightTag);
 
-            resultList.add(resultCurrentTag);
+            TagBodyResponse tagBodyResponse = new TagBodyResponse();
+            tagBodyResponse.setName(currentTag.getName());
+            tagBodyResponse.setWeight(weightTag);
+            resultList.add(tagBodyResponse);
         }
-
 
         TagResponse tagResponse = new TagResponse();
         tagResponse.setTags(resultList);

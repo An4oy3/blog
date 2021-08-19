@@ -74,4 +74,15 @@ public class ApiGeneralController {
     }
     //====================================
 
+    //GET /api/post/byDate
+    @GetMapping("/api/post/byDate")
+    public PostResponse getPostsByDate(@RequestParam(value = "offset") String offset, @RequestParam(value = "limit") String limit, @RequestParam(value = "date") String date){
+        return postService.getPostsByDate(offset, limit, date);
+    }
+
+    //GET /api/post/byTag
+    @GetMapping("/api/post/byTag")
+    public PostResponse getPostsByTag(@RequestParam(value = "offset") String offset, @RequestParam(value = "limit") String limit, @RequestParam(value = "tag") String tag){
+        return postService.getPostsByTag(offset, limit, tag);
+    }
 }

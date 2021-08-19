@@ -5,15 +5,12 @@ import main.model.response.CalendarResponse;
 import main.model.response.PostResponse;
 import main.model.response.PostBodyResponse;
 import main.model.response.UserBodyResponse;
-import org.hibernate.Criteria;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.Metadata;
 import org.hibernate.boot.MetadataSources;
 import org.hibernate.boot.registry.StandardServiceRegistry;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
-import org.hibernate.query.NativeQuery;
-import org.hibernate.query.Query;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -21,16 +18,17 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
-import java.text.SimpleDateFormat;
 import java.util.*;
 
 @Service
 public class PostService {
     private final PostRepository postRepository;
+    private final TagRepository tagRepository;
     //private final PostVoteRepository postVoteRepository;
 
-    public PostService(PostRepository postRepository) {
+    public PostService(PostRepository postRepository, TagRepository tagRepository) {
         this.postRepository = postRepository;
+        this.tagRepository = tagRepository;
     }
     //Этап 2. Метод GET /api/post
     public PostResponse getPosts(String offset, String limit, String mode){
@@ -52,32 +50,32 @@ public class PostService {
             if(post.getIsActive() != 1 || post.getTime().compareTo(new Date()) != -1){ //если поле IsActive у поста не равно 1 или дата публикации позже текущей даты
                 continue;                                                              //Добавить проверку на статус модерации. Убрал, т.к. в БД нету постов с нужным статусом
             }
-                //List<PostVote> postVotePage = postVoteRepository.findAllByPostId(post.getId()); //Получаем список оценок(лайки/дизлайки) к текущему посту
-                List<PostVote> postVotePage = post.getVotes(); // //Получаем список оценок(лайки/дизлайки) к текущему посту, без использования дополнительного репозитория
-                int likeCount = 0;
-                int dislikeCount = 0;
-                for (PostVote postVote : postVotePage) {
-                    if(postVote.getValue() == 1){ //Если значение поля 1 - то это лайк, если -1, то дизлайк
-                        likeCount++;
-                    } else {
-                        dislikeCount++;
-                    }
-                }
-            PostBodyResponse postBodyResponse = new PostBodyResponse(); //Создаем обьект, который состоит из тех полей, которые front может обработать и инициализируем их все
-            UserBodyResponse userBodyResponse = new UserBodyResponse(); //Одно из полей обьекта PostBodyResponse - это отдельный обьект с полями юзера
-                userBodyResponse.setId(post.getUserId().getId());
-                userBodyResponse.setName(post.getUserId().getName());
-            postBodyResponse.setId(post.getId());
-            postBodyResponse.setTimestamp(post.getTime().getTime()/1000);
-            postBodyResponse.setUser(userBodyResponse);
-            postBodyResponse.setTitle(post.getTitle());
-            String announce = post.getText().length() >= 150 ? post.getText().substring(0, 150) + " ..." : post.getText();
-            postBodyResponse.setAnnounce(removerTags(announce));
-            postBodyResponse.setLikeCount(likeCount);
-            postBodyResponse.setDislikeCount(dislikeCount);
-            postBodyResponse.setCommentCount(post.getComments().size());
-            postBodyResponse.setViewCount(post.getViewCount());
-
+            PostBodyResponse postBodyResponse = fillPostBodyResponse(post);
+//                //List<PostVote> postVotePage = postVoteRepository.findAllByPostId(post.getId()); //Получаем список оценок(лайки/дизлайки) к текущему посту
+//                List<PostVote> postVotePage = post.getVotes(); // //Получаем список оценок(лайки/дизлайки) к текущему посту, без использования дополнительного репозитория
+//                int likeCount = 0;
+//                int dislikeCount = 0;
+//                for (PostVote postVote : postVotePage) {
+//                    if(postVote.getValue() == 1){ //Если значение поля 1 - то это лайк, если -1, то дизлайк
+//                        likeCount++;
+//                    } else {
+//                        dislikeCount++;
+//                    }
+//                }
+//            PostBodyResponse postBodyResponse = new PostBodyResponse(); //Создаем обьект, который состоит из тех полей, которые front может обработать и инициализируем их все
+//            UserBodyResponse userBodyResponse = new UserBodyResponse(); //Одно из полей обьекта PostBodyResponse - это отдельный обьект с полями юзера
+//                userBodyResponse.setId(post.getUserId().getId());
+//                userBodyResponse.setName(post.getUserId().getName());
+//            postBodyResponse.setId(post.getId());
+//            postBodyResponse.setTimestamp(post.getTime().getTime()/1000);
+//            postBodyResponse.setUser(userBodyResponse);
+//            postBodyResponse.setTitle(post.getTitle());
+//            String announce = post.getText().length() >= 150 ? post.getText().substring(0, 150) + " ..." : post.getText();
+//            postBodyResponse.setAnnounce(removerTags(announce));
+//            postBodyResponse.setLikeCount(likeCount);
+//            postBodyResponse.setDislikeCount(dislikeCount);
+//            postBodyResponse.setCommentCount(post.getComments().size());
+//            postBodyResponse.setViewCount(post.getViewCount());
             posts.add(postBodyResponse);
         }
         PostResponse postResponse = new PostResponse();
@@ -107,29 +105,30 @@ public class PostService {
                 }
             }
             if(isMatched){
-                PostBodyResponse postBodyResponse = new PostBodyResponse(); //Создаем обьект, который состоит из тех полей, которые front может обработать и инициализируем их все
-                UserBodyResponse userBodyResponse = new UserBodyResponse(); //Одно из полей обьекта PostBodyResponse - это отдельный обьект с полями юзера
-                userBodyResponse.setId(post.getUserId().getId());
-                userBodyResponse.setName(post.getUserId().getName());
-                postBodyResponse.setId(post.getId());
-                postBodyResponse.setTimestamp(post.getTime().getTime()/1000);
-                postBodyResponse.setUser(userBodyResponse);
-                postBodyResponse.setTitle(post.getTitle());
-                String announce = post.getText().length() >= 150 ? post.getText().substring(0, 150) + " ..." : post.getText();
-                postBodyResponse.setAnnounce(removerTags(announce));
-
-                int likeCount = 0;
-                int dislikeCount = 0;
-                for (PostVote vote : post.getVotes()) { //Считаем лайки и дизлайки поста
-                    if(vote.getValue() == 1)
-                        likeCount++;
-                    else
-                        dislikeCount++;
-                }
-                postBodyResponse.setLikeCount(likeCount);
-                postBodyResponse.setDislikeCount(dislikeCount);
-                postBodyResponse.setCommentCount(post.getComments().size());
-                postBodyResponse.setViewCount(post.getViewCount());
+//                PostBodyResponse postBodyResponse = new PostBodyResponse(); //Создаем обьект, который состоит из тех полей, которые front может обработать и инициализируем их все
+//                UserBodyResponse userBodyResponse = new UserBodyResponse(); //Одно из полей обьекта PostBodyResponse - это отдельный обьект с полями юзера
+//                userBodyResponse.setId(post.getUserId().getId());
+//                userBodyResponse.setName(post.getUserId().getName());
+//                postBodyResponse.setId(post.getId());
+//                postBodyResponse.setTimestamp(post.getTime().getTime()/1000);
+//                postBodyResponse.setUser(userBodyResponse);
+//                postBodyResponse.setTitle(post.getTitle());
+//                String announce = post.getText().length() >= 150 ? post.getText().substring(0, 150) + " ..." : post.getText();
+//                postBodyResponse.setAnnounce(removerTags(announce));
+//
+//                int likeCount = 0;
+//                int dislikeCount = 0;
+//                for (PostVote vote : post.getVotes()) { //Считаем лайки и дизлайки поста
+//                    if(vote.getValue() == 1)
+//                        likeCount++;
+//                    else
+//                        dislikeCount++;
+//                }
+//                postBodyResponse.setLikeCount(likeCount);
+//                postBodyResponse.setDislikeCount(dislikeCount);
+//                postBodyResponse.setCommentCount(post.getComments().size());
+//                postBodyResponse.setViewCount(post.getViewCount());
+                PostBodyResponse postBodyResponse = fillPostBodyResponse(post);
                 postsResult.add(postBodyResponse);
             }
         }
@@ -186,6 +185,77 @@ public class PostService {
         return calendarResponse;
     }
     //====================================
+
+    //Этап 3. Метод GET /api/post/byDate
+    public PostResponse getPostsByDate(String offset, String limit, String date){
+        List<PostBodyResponse> posts = new ArrayList<>(); //Список, который будет возвращаться в качестве ответа(PostResponse)
+
+        //Преобразовываем переданную дату в формат, в котором она хранится в базе данных.
+        Timestamp timestamp = Timestamp.valueOf(date + " 00:00:00");
+        Pageable pageable = PageRequest.of(Integer.parseInt(offset), Integer.parseInt(limit));
+        Page<Post> resultList = postRepository.findAllByTime(timestamp, pageable); //****УТОЧНИТЬ КАК СДЕЛАТЬ, ЧТОБЫ МЕТОД ВОЗВРАЩАЛ ПОСТЫ СРАВНИВАЯ ТОЛЬКО ДАТУ, БЕЗ УЧЕТА ВРЕМЕНИ(HH:MM:SS)
+
+        for (Post post : resultList) {
+            if(post.getIsActive() != 1 || post.getTime().compareTo(new Date()) != -1){ //если поле IsActive у поста не равно 1 или дата публикации позже текущей даты
+                continue;                                                              //Добавить проверку на статус модерации. Убрал, т.к. в БД нету постов с нужным статусом
+            }
+            PostBodyResponse postBodyResponse = fillPostBodyResponse(post);
+            posts.add(postBodyResponse);
+        }
+        PostResponse postResponse = new PostResponse();
+        postResponse.setCount(posts.size());
+        postResponse.setPosts(posts);
+        return postResponse;
+    }
+    //====================================
+
+    //Этап 3. Метод GET /api/post/byTag
+    public PostResponse getPostsByTag(String offset, String limit, String tagName){
+        List<PostBodyResponse> posts = new ArrayList<>(); //Список, который будет возвращаться в качестве ответа(PostResponse)
+        List<Tag> tagList = tagRepository.findAllByName(tagName); //Тег, который был передан в кач-ве параметра
+        for (Tag tag : tagList) {
+           List<Post> postsFromTag = tag.getPostList(); // Список постов по переданному тегу
+            for (Post post : postsFromTag) {
+                PostBodyResponse postBodyResponse = fillPostBodyResponse(post);
+                posts.add(postBodyResponse);
+            }
+        }
+        PostResponse postResponse = new PostResponse();
+        postResponse.setCount(posts.size());
+        postResponse.setPosts(posts);
+        return postResponse;
+    }
+    //====================================
+
+
+    //Метод для заполнения обьекта PostBodyResponse. Нужные поля обьекта post копируются в обьект postBodyResponse
+    private PostBodyResponse fillPostBodyResponse(Post post){
+        List<PostVote> postVotePage = post.getVotes(); // //Получаем список оценок(лайки/дизлайки) к текущему посту, без использования дополнительного репозитория
+        int likeCount = 0;
+        int dislikeCount = 0;
+        for (PostVote postVote : postVotePage) {
+            if(postVote.getValue() == 1){ //Если значение поля 1 - то это лайк, если -1, то дизлайк
+                likeCount++;
+            } else {
+                dislikeCount++;
+            }
+        }
+        PostBodyResponse postBodyResponse = new PostBodyResponse(); //Создаем обьект, который состоит из тех полей, которые front может обработать и инициализируем их все
+        UserBodyResponse userBodyResponse = new UserBodyResponse(); //Одно из полей обьекта PostBodyResponse - это отдельный обьект с полями юзера
+        userBodyResponse.setId(post.getUserId().getId());
+        userBodyResponse.setName(post.getUserId().getName());
+        postBodyResponse.setId(post.getId());
+        postBodyResponse.setTimestamp(post.getTime().getTime()/1000);
+        postBodyResponse.setUser(userBodyResponse);
+        postBodyResponse.setTitle(post.getTitle());
+        String announce = post.getText().length() >= 150 ? post.getText().substring(0, 150) + " ..." : post.getText();
+        postBodyResponse.setAnnounce(removerTags(announce));
+        postBodyResponse.setLikeCount(likeCount);
+        postBodyResponse.setDislikeCount(dislikeCount);
+        postBodyResponse.setCommentCount(post.getComments().size());
+        postBodyResponse.setViewCount(post.getViewCount());
+        return postBodyResponse;
+    }
 
     private String removerTags(String html) {
         return html.replaceAll("\\<(/?[^\\>]+)\\>", " ").replaceAll("\\s+", " ").trim();
