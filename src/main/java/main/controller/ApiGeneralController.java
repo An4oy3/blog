@@ -3,9 +3,7 @@ package main.controller;
 import main.model.request.Mode;
 import main.model.request.PostRequest;
 import main.model.request.TagRequest;
-import main.model.response.PostResponse;
-import main.model.response.SettingsResponse;
-import main.model.response.TagResponse;
+import main.model.response.*;
 import main.service.PostService;
 import main.service.SettingsService;
 import main.service.TagService;
@@ -13,7 +11,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import main.model.response.InitResponse;
 
 @RestController
 public class ApiGeneralController {
@@ -30,7 +27,6 @@ public class ApiGeneralController {
         this.postService = postService;
         this.tagService = tagService;
     }
-
     @GetMapping("/api/init")
     public InitResponse init(){
         return initResponse;
@@ -63,11 +59,30 @@ public class ApiGeneralController {
         POST /api/auth/register - В контроллере ApiPostController
      */
 
+    //GET /api/post/search
     @GetMapping("/api/post/search")
     public PostResponse postSearch(@RequestParam(value = "offset") String offset, @RequestParam(value = "limit") String limit, @RequestParam(value = "query", defaultValue = "") String query){
         return postService.getPostsSearch(offset, limit, query);
     }
+    //====================================
 
+    //GET /api/calendar
+    @GetMapping("/api/calendar")
+    public CalendarResponse getPostsByYear(@RequestParam(value = "year") String year){
 
+        return postService.getPostsByYear(year);
+    }
+    //====================================
 
+    //GET /api/post/byDate
+    @GetMapping("/api/post/byDate")
+    public PostResponse getPostsByDate(@RequestParam(value = "offset") String offset, @RequestParam(value = "limit") String limit, @RequestParam(value = "date") String date){
+        return postService.getPostsByDate(offset, limit, date);
+    }
+
+    //GET /api/post/byTag
+    @GetMapping("/api/post/byTag")
+    public PostResponse getPostsByTag(@RequestParam(value = "offset") String offset, @RequestParam(value = "limit") String limit, @RequestParam(value = "tag") String tag){
+        return postService.getPostsByTag(offset, limit, tag);
+    }
 }

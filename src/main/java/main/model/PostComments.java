@@ -21,6 +21,7 @@ public class PostComments {
     @Getter
     @Setter
     @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "parent_id_id")
     private PostComments parentId;
 
     @Getter
