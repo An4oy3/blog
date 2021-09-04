@@ -7,10 +7,7 @@ import main.model.response.*;
 import main.service.PostService;
 import main.service.SettingsService;
 import main.service.TagService;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 public class ApiGeneralController {
@@ -79,10 +76,22 @@ public class ApiGeneralController {
     public PostResponse getPostsByDate(@RequestParam(value = "offset") String offset, @RequestParam(value = "limit") String limit, @RequestParam(value = "date") String date){
         return postService.getPostsByDate(offset, limit, date);
     }
+    //====================================
 
     //GET /api/post/byTag
     @GetMapping("/api/post/byTag")
     public PostResponse getPostsByTag(@RequestParam(value = "offset") String offset, @RequestParam(value = "limit") String limit, @RequestParam(value = "tag") String tag){
         return postService.getPostsByTag(offset, limit, tag);
     }
+    //====================================
+
+    //GET /api/post/{ID}
+    @GetMapping("api/post/{id}")
+    public PostBodyResponse getPostById(@PathVariable String id){
+        return postService.getPostById(id);
+    }
+    //====================================
+
+
+
 }

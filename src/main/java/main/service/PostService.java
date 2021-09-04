@@ -1,42 +1,37 @@
 package main.service;
 
 import main.model.*;
-import main.model.response.CalendarResponse;
-import main.model.response.PostResponse;
-import main.model.response.PostBodyResponse;
-import main.model.response.UserBodyResponse;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.hibernate.boot.Metadata;
-import org.hibernate.boot.MetadataSources;
-import org.hibernate.boot.registry.StandardServiceRegistry;
-import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
+import main.model.response.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.JpaSort;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.server.ResponseStatusException;
 
-import java.sql.Timestamp;
+import java.sql.SQLException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 public class PostService {
     private final PostRepository postRepository;
     private final TagRepository tagRepository;
+    private final Tag2PostRepository tag2PostRepository;
 
-    public PostService(PostRepository postRepository, TagRepository tagRepository) {
+    public PostService(PostRepository postRepository, TagRepository tagRepository, Tag2PostRepository tag2PostRepository) {
         this.postRepository = postRepository;
         this.tagRepository = tagRepository;
+        this.tag2PostRepository = tag2PostRepository;
     }
 
     //Этап 2. Метод GET /api/post
     public PostResponse getPosts(String offset, String limit, String mode){
-        List<PostBodyResponse> posts = new ArrayList<>();
         Sort sort =  Sort.by(Sort.Direction.DESC, "time"); //Сортировка по умолчанию, по дате - от новых к старым;
 
         if(mode.equals("popular"))
@@ -48,15 +43,8 @@ public class PostService {
 
         Pageable pageable = PageRequest.of(Integer.parseInt(offset), Integer.parseInt(limit), sort);
         Page<Post> list = postRepository.findAllPost(pageable);
-        for (Post post : list) {
-            PostBodyResponse postBodyResponse = fillPostBodyResponse(post);
-            posts.add(postBodyResponse);
-        }
-        PostResponse postResponse = new PostResponse();
-
-        postResponse.setCount(posts.size());
-        postResponse.setPosts(posts);
-        return postResponse;
+        List<PostBodyResponse> posts = fillPostBodyResponseList(list);
+        return setPostResponseValue(posts);
     }
     //====================================
 
@@ -71,28 +59,18 @@ public class PostService {
                 posts.add(postBodyResponse);
             }
         }
-        PostResponse postResponse = new PostResponse();
-        postResponse.setCount(posts.size());
-        postResponse.setPosts(posts);
-        return postResponse;
+        return setPostResponseValue(posts);
     }
     //====================================
 
     //GET /api/post/search
     public PostResponse getPostsSearch(String offset, String limit, String query){
-        List<PostBodyResponse> postsResult = new ArrayList<>();
-
         Pageable pageable = PageRequest.of(Integer.parseInt(offset), Integer.parseInt(limit));
         Page<Post> posts = postRepository.findAllPostByQuery(query, pageable);
-        for (Post post : posts) {
-            PostBodyResponse postBodyResponse = fillPostBodyResponse(post);
-            postsResult.add(postBodyResponse);
-        }
 
-        PostResponse postResponse = new PostResponse();
-        postResponse.setPosts(postsResult);
-        postResponse.setCount(postsResult.size());
-        return postResponse;
+        List<PostBodyResponse> postsResult = fillPostBodyResponseList(posts);
+
+        return setPostResponseValue(postsResult);
     }
     //====================================
 
@@ -106,20 +84,10 @@ public class PostService {
            int y = date.get(Calendar.YEAR);
            year = String.valueOf(y);
         }
-        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
 
-        String yearBegin = year + "-01-01 00:00:00";
-        String yearEnd = year + "-12-31 23:59:59";
-        Date begin = null;
-        Date end = null;
-        try {
-            begin = df.parse(yearBegin);
-            end = df.parse(yearEnd);
-        } catch (ParseException e) {
-            e.printStackTrace();
-        }
-
-        List postsByYear = postRepository.findAllPostsByYear(begin, end);
+        LocalDate beginYear = LocalDate.ofYearDay(Integer.parseInt(year), 1);
+        LocalDate endYear = LocalDate.ofYearDay(Integer.parseInt(year), 365);
+        List postsByYear = postRepository.findAllPostsByYear(beginYear, endYear);
         List<Integer> allYears = postRepository.findAllYears();
         Map<String, Integer> posts = new TreeMap<>();
         for (Object o : postsByYear) {
@@ -140,23 +108,59 @@ public class PostService {
 
     //Метод GET /api/post/byDate
     public PostResponse getPostsByDate(String offset, String limit, String date){
-        List<PostBodyResponse> posts = new ArrayList<>();
-
         Pageable pageable = PageRequest.of(Integer.parseInt(offset), Integer.parseInt(limit));
         Page<Post> resultList = postRepository.findAllByTime(date, pageable);
-        for (Post post : resultList) {
-            PostBodyResponse postBodyResponse = fillPostBodyResponse(post);
-            posts.add(postBodyResponse);
-        }
+        List<PostBodyResponse> posts = fillPostBodyResponseList(resultList);
 
-        PostResponse postResponse = new PostResponse();
-        postResponse.setCount(posts.size());
-        postResponse.setPosts(posts);
-        return postResponse;
+        return setPostResponseValue(posts);
     }
     //====================================
 
-    //Метод для заполнения обьекта PostBodyResponse.
+    //GET /api/post/{ID}
+    public PostBodyResponse getPostById(@PathVariable String id){
+        if(id.isEmpty() || Integer.parseInt(id) < 0 || Integer.parseInt(id) > postRepository.count()){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+
+        Post post = postRepository.findPostById(Integer.parseInt(id));
+        PostBodyResponse postBodyResponse = fillPostBodyResponse(post);
+
+        postBodyResponse.setActive(post.getIsActive() == 1);
+        postBodyResponse.setText(post.getText());
+
+        List<CommentBodyResponse> commentBodyResponses = new ArrayList<>();
+        for (PostComments comment : post.getComments()) {
+            CommentBodyResponse commentBodyResponse = new CommentBodyResponse();
+            commentBodyResponse.setId(comment.getId());
+            commentBodyResponse.setText(comment.getText());
+            commentBodyResponse.setTimestamp(comment.getTime().getTime() / 1000);
+                UserBodyResponse userBodyResponse = new UserBodyResponse();
+                userBodyResponse.setId(comment.getUser().getId());
+                userBodyResponse.setName(comment.getUser().getName());
+                userBodyResponse.setPhoto(comment.getUser().getPhoto());
+            commentBodyResponse.setUser(userBodyResponse);
+
+            commentBodyResponses.add(commentBodyResponse);
+        }
+        postBodyResponse.setComments(commentBodyResponses);
+
+        List<String> tags = new ArrayList<>();
+        List<Tag2Post> tag2Post = tag2PostRepository.findAllByPostId(post.getId());
+        for (Tag2Post currentTag2Post : tag2Post) {
+            if(tagRepository.findById(currentTag2Post.getTagId()).isPresent()) {
+                tags.add(tagRepository.findById(currentTag2Post.getTagId()).get().getName());
+            }
+        }
+        postBodyResponse.setTags(tags);
+
+
+        return postBodyResponse;
+    }
+    //====================================
+
+
+
+    //методы для заполнения обьектов
     private PostBodyResponse fillPostBodyResponse(Post post){
         List<PostVote> postVotePage = post.getVotes(); // //Получаем список оценок(лайки/дизлайки) к текущему посту, без использования дополнительного репозитория
         int likeCount = 0;
@@ -183,6 +187,45 @@ public class PostService {
         postBodyResponse.setCommentCount(post.getComments().size());
         postBodyResponse.setViewCount(post.getViewCount());
         return postBodyResponse;
+    }
+
+    private List<PostBodyResponse> fillPostBodyResponseList(Page<Post> posts){
+        List<PostBodyResponse> postBodyResponseList = new ArrayList<>();
+        for (Post post : posts) {
+            List<PostVote> postVotePage = post.getVotes(); // //Получаем список оценок(лайки/дизлайки) к текущему посту, без использования дополнительного репозитория
+            int likeCount = 0;
+            int dislikeCount = 0;
+            for (PostVote postVote : postVotePage) {
+                if(postVote.getValue() == 1){ //Если значение поля 1 - то это лайк, если -1, то дизлайк
+                    likeCount++;
+                } else {
+                    dislikeCount++;
+                }
+            }
+            PostBodyResponse postBodyResponse = new PostBodyResponse(); //Создаем обьект, который состоит из тех полей, которые front может обработать и инициализируем их все
+            UserBodyResponse userBodyResponse = new UserBodyResponse(); //Одно из полей обьекта PostBodyResponse - это отдельный обьект с полями юзера
+            userBodyResponse.setId(post.getUserId().getId());
+            userBodyResponse.setName(post.getUserId().getName());
+            postBodyResponse.setId(post.getId());
+            postBodyResponse.setTimestamp(post.getTime().getTime()/1000);
+            postBodyResponse.setUser(userBodyResponse);
+            postBodyResponse.setTitle(post.getTitle());
+            String announce = post.getText().length() >= 150 ? post.getText().substring(0, 150) + " ..." : post.getText();
+            postBodyResponse.setAnnounce(removerTags(announce));
+            postBodyResponse.setLikeCount(likeCount);
+            postBodyResponse.setDislikeCount(dislikeCount);
+            postBodyResponse.setCommentCount(post.getComments().size());
+            postBodyResponse.setViewCount(post.getViewCount());
+            postBodyResponseList.add(postBodyResponse);
+        }
+        return postBodyResponseList;
+    }
+
+    private PostResponse setPostResponseValue(List<PostBodyResponse> postBodyResponses){
+        PostResponse postResponse = new PostResponse();
+        postResponse.setCount(postBodyResponses.size());
+        postResponse.setPosts(postBodyResponses);
+        return postResponse;
     }
 
     private String removerTags(String html) {
