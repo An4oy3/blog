@@ -16,13 +16,4 @@ public class DefaultController {
     public String redirect(){
         return "forward:/";
     }
-
-//    @GetMapping(value = {
-//            "/{path:[^.]*}",
-//            "/{path:[^.]*}/{path:[^.]*}",
-//            "/{path:[^.]*}/{path:[^.]*}/{path:[^.]*}",
-//            "/{path:[^.]*}/{path:[^.]*}/{path:[^.]*}/{path:[^.]*}",
-//            "/{path:[^.]*}/{path:[^.]*}/{path:[^.]*}/{path:[^.]*}/{path:[^.]*}"
-//            // add more if required ...
-//    })
 }
