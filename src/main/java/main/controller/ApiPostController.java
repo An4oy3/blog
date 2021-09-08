@@ -9,14 +9,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class ApiPostController {
-    private final RegisterService registerService;
 
-    public ApiPostController(RegisterService registerService) {
-        this.registerService = registerService;
-    }
 
-    @PostMapping("/api/auth/register")
-    public RegisterResponse register(@RequestBody RegisterRequest request){
-        return registerService.register(request);
-    }
 }

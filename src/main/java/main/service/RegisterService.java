@@ -32,6 +32,12 @@ public class RegisterService {
             response.setErrors(errors);
             return response;
         }
+        if(!request.getName().matches("[А-Яа-яA-Za-z]+")){
+            response.setResult(false);
+            errors.setName("Имя указано неверно");
+            response.setErrors(errors);
+            return response;
+        }
         User user = userRepository.findOneByEmail(request.getEmail());
         if(user == null){
             user = new User();
