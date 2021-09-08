@@ -192,30 +192,7 @@ public class PostService {
     private List<PostBodyResponse> fillPostBodyResponseList(Page<Post> posts){
         List<PostBodyResponse> postBodyResponseList = new ArrayList<>();
         for (Post post : posts) {
-            List<PostVote> postVotePage = post.getVotes(); // //Получаем список оценок(лайки/дизлайки) к текущему посту, без использования дополнительного репозитория
-            int likeCount = 0;
-            int dislikeCount = 0;
-            for (PostVote postVote : postVotePage) {
-                if(postVote.getValue() == 1){ //Если значение поля 1 - то это лайк, если -1, то дизлайк
-                    likeCount++;
-                } else {
-                    dislikeCount++;
-                }
-            }
-            PostBodyResponse postBodyResponse = new PostBodyResponse(); //Создаем обьект, который состоит из тех полей, которые front может обработать и инициализируем их все
-            UserBodyResponse userBodyResponse = new UserBodyResponse(); //Одно из полей обьекта PostBodyResponse - это отдельный обьект с полями юзера
-            userBodyResponse.setId(post.getUserId().getId());
-            userBodyResponse.setName(post.getUserId().getName());
-            postBodyResponse.setId(post.getId());
-            postBodyResponse.setTimestamp(post.getTime().getTime()/1000);
-            postBodyResponse.setUser(userBodyResponse);
-            postBodyResponse.setTitle(post.getTitle());
-            String announce = post.getText().length() >= 150 ? post.getText().substring(0, 150) + " ..." : post.getText();
-            postBodyResponse.setAnnounce(removerTags(announce));
-            postBodyResponse.setLikeCount(likeCount);
-            postBodyResponse.setDislikeCount(dislikeCount);
-            postBodyResponse.setCommentCount(post.getComments().size());
-            postBodyResponse.setViewCount(post.getViewCount());
+            PostBodyResponse postBodyResponse = fillPostBodyResponse(post);
             postBodyResponseList.add(postBodyResponse);
         }
         return postBodyResponseList;
