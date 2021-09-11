@@ -1,9 +1,9 @@
 package main.service;
 
 import main.model.CaptchaCodes;
-import main.model.CaptchaRepository;
+import main.model.repositories.CaptchaRepository;
 import main.model.User;
-import main.model.UserRepository;
+import main.model.repositories.UserRepository;
 import main.model.request.RegisterRequest;
 import main.model.response.RegisterErrors;
 import main.model.response.RegisterResponse;

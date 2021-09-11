@@ -3,7 +3,10 @@ package main.controller;
 import main.model.response.PostBodyResponse;
 import main.model.response.PostResponse;
 import main.service.PostService;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.security.Principal;
 
 @RestController
 public class ApiPostController {
@@ -34,9 +37,16 @@ public class ApiPostController {
         return postService.getPostsByTag(offset, limit, tag);
     }
 
-    @GetMapping("api/post/{id}")
+    @GetMapping("/api/post/{id}")
     public PostBodyResponse getPostById(@PathVariable String id){
         return postService.getPostById(id);
     }
 
+    @GetMapping("/api/post/my")
+    @PreAuthorize("hasAuthority('user:write')")
+    public PostResponse getMyPosts(@RequestParam(value = "offset") String offset,
+                                   @RequestParam(value = "limit") String limit,
+                                   @RequestParam(value = "status") String status, Principal principal){
+        return postService.getMyPosts(offset, limit, status, principal);
+    }
 }

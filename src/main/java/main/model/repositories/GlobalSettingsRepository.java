@@ -1,5 +1,6 @@
-package main.model;
+package main.model.repositories;
 
+import main.model.GlobalSettings;
 import org.springframework.data.repository.PagingAndSortingRepository;
 import org.springframework.stereotype.Repository;
 
