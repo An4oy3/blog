@@ -1,15 +1,15 @@
 package main.service;
 
 import main.model.*;
+import main.model.repositories.PostRepository;
+import main.model.repositories.Tag2PostRepository;
+import main.model.repositories.TagRepository;
 import main.model.response.TagBodyResponse;
 import main.model.response.TagResponse;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @Service
 public class TagService {

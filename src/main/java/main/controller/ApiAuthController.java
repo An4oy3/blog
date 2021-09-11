@@ -1,16 +1,20 @@
 package main.controller;
 
+import main.model.request.LoginRequest;
 import main.model.request.RegisterRequest;
-import main.model.response.AuthResponse;
 import main.model.response.CaptchaResponse;
+import main.model.response.LoginResponse;
 import main.model.response.RegisterResponse;
 import main.service.AuthService;
 import main.service.CaptchaService;
 import main.service.RegisterService;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.security.Principal;
 
 @RestController
 public class ApiAuthController {
@@ -26,8 +30,8 @@ public class ApiAuthController {
 
 
     @GetMapping("/api/auth/check")
-    public AuthResponse check(){
-        return authService.getAuthCheck();
+    public LoginResponse check(Principal principal){
+        return authService.check(principal);
     }
 
     @GetMapping("/api/auth/captcha")
@@ -38,6 +42,17 @@ public class ApiAuthController {
     @PostMapping("/api/auth/register")
     public RegisterResponse register(@RequestBody RegisterRequest request){
         return registerService.register(request);
+    }
+
+    @PostMapping("/api/auth/login")
+    public LoginResponse login(@RequestBody LoginRequest request){
+        return authService.login(request);
+    }
+
+    @GetMapping("/api/auth/logout")
+    @PreAuthorize("hasAuthority('user:write')")
+    public LoginResponse logout(Principal principal){
+        return authService.logout(principal);
     }
 
 }

@@ -1,5 +1,6 @@
-package main.model;
+package main.model.repositories;
 
+import main.model.Post;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -37,4 +38,7 @@ public interface PostRepository extends JpaRepository<Post, Integer> {
 
     @Query(value = "select p from Post p WHERE is_active = 1 AND moderation_status = 'ACCEPTED' AND time <= now() AND id = :id")
     Post findPostById(@Param("id")Integer id);
+
+    @Query(value = "select p from Post p WHERE is_active = :isActive AND moderation_status = :moderationStatus AND user_id = :id")
+    Page<Post> findAllByUserId(@Param("id")Integer userId, @Param("isActive")String isActive, @Param(value = "moderationStatus") String moderationStatus, Pageable pageable);
 }

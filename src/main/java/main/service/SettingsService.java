@@ -1,7 +1,7 @@
 package main.service;
 
 import main.model.GlobalSettings;
-import main.model.GlobalSettingsRepository;
+import main.model.repositories.GlobalSettingsRepository;
 import main.model.response.SettingsResponse;
 import org.springframework.stereotype.Service;
 

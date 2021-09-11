@@ -1,20 +1,21 @@
 package main.service;
 
 import main.model.*;
+import main.model.repositories.PostRepository;
+import main.model.repositories.Tag2PostRepository;
+import main.model.repositories.TagRepository;
+import main.model.repositories.UserRepository;
 import main.model.response.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.sql.SQLException;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.security.Principal;
 import java.time.LocalDate;
 import java.util.*;
 
@@ -23,11 +24,13 @@ public class PostService {
     private final PostRepository postRepository;
     private final TagRepository tagRepository;
     private final Tag2PostRepository tag2PostRepository;
+    private final UserRepository userRepository;
 
-    public PostService(PostRepository postRepository, TagRepository tagRepository, Tag2PostRepository tag2PostRepository) {
+    public PostService(PostRepository postRepository, TagRepository tagRepository, Tag2PostRepository tag2PostRepository, UserRepository userRepository) {
         this.postRepository = postRepository;
         this.tagRepository = tagRepository;
         this.tag2PostRepository = tag2PostRepository;
+        this.userRepository = userRepository;
     }
 
     //Этап 2. Метод GET /api/post
@@ -155,6 +158,29 @@ public class PostService {
 
 
         return postBodyResponse;
+    }
+    //====================================
+
+    //GET /api/post/my
+    public PostResponse getMyPosts(String offset, String limit, String status, Principal principal){
+        Pageable pageable = PageRequest.of(Integer.parseInt(offset), Integer.parseInt(limit));
+        String isActive = "1";
+        String moderationStatus = "";
+
+        if(status.equals("inactive")){
+            isActive = "0";
+        } else if(status.equals("pending")){
+            moderationStatus = "NEW";
+        } else if(status.equals("declined")) {
+            moderationStatus = "DECLINED";
+        } else if(status.equals("published")){
+            moderationStatus = "ACCEPTED";
+        }
+        User user = userRepository.findOneByEmail(principal.getName());
+        Page<Post> userPosts = postRepository.findAllByUserId(user.getId(), isActive, moderationStatus, pageable);
+        List<PostBodyResponse> result = fillPostBodyResponseList(userPosts);
+
+        return setPostResponseValue(result);
     }
     //====================================
 
