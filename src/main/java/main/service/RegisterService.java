@@ -7,6 +7,7 @@ import main.model.repositories.UserRepository;
 import main.model.request.RegisterRequest;
 import main.model.response.RegisterErrors;
 import main.model.response.RegisterResponse;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +25,7 @@ public class RegisterService {
     public RegisterResponse register(RegisterRequest request){
         RegisterResponse response = new RegisterResponse();
         RegisterErrors errors = new RegisterErrors();
+        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
 
         CaptchaCodes captchaCode = captchaRepository.findOneBySecretCode(request.getCaptcha_secret());
         if(!captchaCode.getCode().equalsIgnoreCase(request.getCaptcha())){
@@ -43,7 +45,7 @@ public class RegisterService {
             user = new User();
             user.setName(request.getName());
             user.setEmail(request.getEmail());
-            user.setPassword(request.getPassword());
+            user.setPassword(encoder.encode(request.getPassword()));
             userRepository.addUser(user.getEmail(), user.getName(), user.getPassword());
             response.setResult(true);
             return response;
