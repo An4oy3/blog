@@ -12,6 +12,7 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.stereotype.Service;
 
@@ -36,6 +37,12 @@ public class AuthService {
     }
 
     public LoginResponse login(LoginRequest request){
+        main.model.User currentUser = userRepository.findOneByEmail(request.getEmail());
+        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
+        if(!encoder.matches(request.getPassword(), currentUser.getPassword())){
+            return new LoginResponse();
+        }
+
         Authentication auth = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
