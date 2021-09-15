@@ -1,6 +1,8 @@
 package main.service;
 
 import com.github.cage.Cage;
+import com.github.cage.GCage;
+import com.github.cage.YCage;
 import main.model.CaptchaCodes;
 import main.model.repositories.CaptchaRepository;
 import main.model.response.CaptchaResponse;
@@ -24,11 +26,9 @@ public class CaptchaService {
     }
 
     public CaptchaResponse captchaGenerate(){
-        Cage cage = new Cage();
-
-        String code = cage.getTokenGenerator().next();
+        Cage cage = new GCage();
+        String code = cage.getTokenGenerator().next().substring(0,4);
         String secret = UUID.randomUUID().toString();
-
         captchaRepository.addCaptcha(secret, code);
         CaptchaCodes captchaCode = captchaRepository.findOneBySecretCode(secret);
 

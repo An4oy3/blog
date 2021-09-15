@@ -21,4 +21,4 @@ blog:
   copyright: Дмитрий Сергеев
   copyrightFrom: 2005
   result: false
-  captchaDeleteTimeMinutes : 60
+  captchaDeleteTimeMinutes : 120
