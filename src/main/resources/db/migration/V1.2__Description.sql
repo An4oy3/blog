@@ -1,0 +1,1 @@
+Alter TABLE `posts` MODIFY COLUMN `text` TEXT;

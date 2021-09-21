@@ -1,9 +1,7 @@
 package main.model.response;
 
 import lombok.Data;
-import main.model.PostComments;
 
-import java.util.Date;
 import java.util.List;
 
 

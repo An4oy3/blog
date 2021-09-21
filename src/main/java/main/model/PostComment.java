@@ -9,7 +9,7 @@ import java.util.Date;
 
 @Entity
 @Table(name = "post_comments")
-public class PostComments {
+public class PostComment {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -22,7 +22,7 @@ public class PostComments {
     @Setter
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "parent_id_id")
-    private PostComments parentId;
+    private PostComment parentId;
 
     @Getter
     @Setter

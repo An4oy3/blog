@@ -5,6 +5,7 @@ import main.model.repositories.PostRepository;
 import main.model.repositories.Tag2PostRepository;
 import main.model.repositories.TagRepository;
 import main.model.repositories.UserRepository;
+import main.model.request.PostAddRequest;
 import main.model.response.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -54,14 +55,12 @@ public class PostService {
     //GET /api/post/byTag
     public PostResponse getPostsByTag(String offset, String limit, String tagName){
         List<PostBodyResponse> posts = new ArrayList<>();
-        List<Tag> tagList = tagRepository.findAllByName(tagName);
-        for (Tag tag : tagList) {
+        Tag tag = tagRepository.findOneByName(tagName);
             List<Post> postsFromTag = tag.getPostList(); // Список постов по переданному тегу
             for (Post post : postsFromTag) {
                 PostBodyResponse postBodyResponse = fillPostBodyResponse(post);
                 posts.add(postBodyResponse);
             }
-        }
         return setPostResponseValue(posts);
     }
     //====================================
@@ -125,14 +124,14 @@ public class PostService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
 
-        Post post = postRepository.findPostById(Integer.parseInt(id));
-        PostBodyResponse postBodyResponse = fillPostBodyResponse(post);
+        Post post = postRepository.findPostById(Integer.parseInt(id)); //Условия на активность поста и статус модерации в методе репозитория не дают получить и ообразить свои посты.
+        PostBodyResponse postBodyResponse = fillPostBodyResponse(post);//УБРАЛ ЭТИ УСЛОВИЯ "is_active = 1 AND moderation_status = 'ACCEPTED' AND"
 
         postBodyResponse.setActive(post.getIsActive() == 1);
         postBodyResponse.setText(post.getText());
 
         List<CommentBodyResponse> commentBodyResponses = new ArrayList<>();
-        for (PostComments comment : post.getComments()) {
+        for (PostComment comment : post.getComments()) {
             CommentBodyResponse commentBodyResponse = new CommentBodyResponse();
             commentBodyResponse.setId(comment.getId());
             commentBodyResponse.setText(comment.getText());
@@ -177,12 +176,120 @@ public class PostService {
             moderationStatus = "ACCEPTED";
         }
         User user = userRepository.findOneByEmail(principal.getName());
-        Page<Post> userPosts = postRepository.findAllByUserId(user.getId(), isActive, moderationStatus, pageable);
+
+        Page<Post> userPosts = moderationStatus.isEmpty() ? postRepository.findAllByUserId(user.getId(), isActive, pageable) : postRepository.findAllByUserId(user.getId(), isActive, moderationStatus, pageable);
         List<PostBodyResponse> result = fillPostBodyResponseList(userPosts);
 
         return setPostResponseValue(result);
     }
     //====================================
+
+    //POST api/post
+    public ContentAddResponse postAdd(PostAddRequest request, Principal principal){
+        ContentAddResponse contentAddResponse = new ContentAddResponse();
+        ContentAddErrors errors = new ContentAddErrors();
+        if(request.getText().length() < 50){
+            errors.setText("Текст публикации слишком короткий");
+            contentAddResponse.setErrors(errors);
+            return contentAddResponse;
+        }
+        if(request.getTitle().length() < 3){
+            errors.setTitle("Заголовок не установлен");
+            contentAddResponse.setErrors(errors);
+            return contentAddResponse;
+        }
+        Post post = new Post();
+        post.setIsActive((byte) request.getActive());
+        post.setModerationStatus(ModerationStatus.NEW);
+        post.setText(request.getText());
+        post.setTitle(request.getTitle());
+        post.setTime(request.getTimestamp().before(new Date()) ? new Date() : request.getTimestamp());
+        post.setUserId(userRepository.findOneByEmail(principal.getName()));
+
+        post = postRepository.save(post);
+
+        for (String tagName : request.getTags()) {
+            Tag tag = tagRepository.findOneByName(tagName);
+            if(tag == null){
+                tag = new Tag();
+                tag.setName(tagName);
+                tag.setPostList(List.of(post));
+                tagRepository.save(tag);
+            } else {
+                List<Post> postList = tag.getPostList();
+                if(!postList.contains(post)) {
+                    postList.add(post);
+                    tag.setPostList(postList);
+                    tagRepository.save(tag);
+                }
+            }
+        }
+        contentAddResponse.setResult(true);
+
+        return contentAddResponse;
+    }
+    //====================================
+
+    //PUT api/post/{id}
+    public ContentAddResponse postPut(PostAddRequest request, String id, Principal principal){
+        ContentAddResponse contentAddResponse = new ContentAddResponse();
+        ContentAddErrors errors = new ContentAddErrors();
+        if(request.getText().length() < 50){
+            errors.setText("Текст публикации слишком короткий");
+            contentAddResponse.setErrors(errors);
+            return contentAddResponse;
+        }
+        if(request.getTitle().length() < 3){
+            errors.setTitle("Заголовок не установлен");
+            contentAddResponse.setErrors(errors);
+            return contentAddResponse;
+        }
+        if(id.isEmpty() || Integer.parseInt(id) < 0 || Integer.parseInt(id) > postRepository.count()){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        Post post = postRepository.findPostById(Integer.parseInt(id));
+        post.setIsActive((byte) request.getActive());
+        post.setText(request.getText());
+        post.setTitle(request.getTitle());
+        post.setTime(request.getTimestamp().before(new Date()) ? new Date() : request.getTimestamp());
+        if(userRepository.findOneByEmail(principal.getName()).getIsModerator() == 0){
+            post.setModerationStatus(ModerationStatus.NEW);
+        }
+
+        for (String tagName : request.getTags()) {
+            Tag tag = tagRepository.findOneByName(tagName);
+            if(tag == null){
+                tag = new Tag();
+                tag.setName(tagName);
+                tag.setPostList(List.of(post));
+                tagRepository.save(tag);
+            } else {
+                List<Post> postList = tag.getPostList();
+                if(!postList.contains(post)) {
+                    postList.add(post);
+                    tag.setPostList(postList);
+                    tagRepository.save(tag);
+                }
+            }
+        }
+        postRepository.save(post);
+        contentAddResponse.setResult(true);
+
+
+        return contentAddResponse;
+    }
+    //====================================
+
+    //GET api/post/moderation
+    public PostResponse getPostForModerate(String offset, String limit, String status){
+        Pageable pageable = PageRequest.of(Integer.parseInt(offset), Integer.parseInt(limit));
+        String moderationStatus = status.toUpperCase(Locale.ROOT);
+
+        Page<Post> posts = postRepository.findAllForModerate(moderationStatus, pageable);
+        List<PostBodyResponse> result = fillPostBodyResponseList(posts);
+
+        return setPostResponseValue(result);
+    }
 
 
 
@@ -212,6 +319,8 @@ public class PostService {
         postBodyResponse.setDislikeCount(dislikeCount);
         postBodyResponse.setCommentCount(post.getComments().size());
         postBodyResponse.setViewCount(post.getViewCount());
+        postBodyResponse.setActive(post.getIsActive() == 1);
+        postBodyResponse.setText(post.getText());
         return postBodyResponse;
     }
 

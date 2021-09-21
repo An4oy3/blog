@@ -1,8 +1,6 @@
 package main.model;
 
-import lombok.Getter;
-import lombok.NonNull;
-import lombok.Setter;
+import lombok.*;
 
 import javax.persistence.*;
 import java.util.Date;
@@ -70,7 +68,7 @@ public class Post {
     @Setter
     @OneToMany(cascade = CascadeType.ALL)
     @JoinColumn(name = "post_id")
-    private List<PostComments> comments;
+    private List<PostComment> comments;
 
     @Getter
     @Setter
