@@ -3,8 +3,7 @@ package main.model.response;
 import lombok.Data;
 
 @Data
-public class LoginResponse {
+public class ContentAddResponse {
     private boolean result;
-    private UserBodyResponse user;
+    private ContentAddErrors errors;
 }
-

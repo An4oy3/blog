@@ -17,7 +17,7 @@ import java.util.List;
 public interface CaptchaRepository extends JpaRepository<CaptchaCodes, Integer> {
     @Modifying
     @Query(value = "INSERT INTO captcha_codes(code, secret_code, time) values (:code, :secret, now())", nativeQuery = true)
-    int addCaptcha(@Param("secret") String secret, @Param("code") String code);
+    void addCaptcha(@Param("secret") String secret, @Param("code") String code);
 
     @Query(value = "select c FROM CaptchaCodes c WHERE secret_code = :secret")
     CaptchaCodes findOneBySecretCode(@Param("secret") String secretCode);

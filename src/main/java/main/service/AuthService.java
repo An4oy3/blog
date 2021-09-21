@@ -1,6 +1,5 @@
 package main.service;
 
-import main.config.DefaultLogoutConfiguration;
 import main.model.repositories.UserRepository;
 import main.model.request.LoginRequest;
 import main.model.response.LoginResponse;
@@ -8,12 +7,10 @@ import main.model.response.UserBodyResponse;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.stereotype.Service;
 
 import java.security.Principal;
@@ -75,7 +72,7 @@ public class AuthService {
 
         LoginResponse response = new LoginResponse();
         response.setResult(true);
-        response.setUserBodyResponse(userBodyResponse);
+        response.setUser(userBodyResponse);
 
         return response;
     }

@@ -1,8 +1,8 @@
 package main.service;
 
 import main.model.CaptchaCodes;
-import main.model.repositories.CaptchaRepository;
 import main.model.User;
+import main.model.repositories.CaptchaRepository;
 import main.model.repositories.UserRepository;
 import main.model.request.RegisterRequest;
 import main.model.response.RegisterErrors;
@@ -22,6 +22,7 @@ public class RegisterService {
         this.captchaRepository = captchaRepository;
     }
 
+    //GET "/api/auth/register"
     public RegisterResponse register(RegisterRequest request){
         RegisterResponse response = new RegisterResponse();
         RegisterErrors errors = new RegisterErrors();
@@ -56,4 +57,5 @@ public class RegisterService {
             return response;
         }
     }
+    //====================================
 }

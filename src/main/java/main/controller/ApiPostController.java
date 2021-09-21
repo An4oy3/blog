@@ -1,5 +1,7 @@
 package main.controller;
 
+import main.model.request.PostAddRequest;
+import main.model.response.ContentAddResponse;
 import main.model.response.PostBodyResponse;
 import main.model.response.PostResponse;
 import main.service.PostService;
@@ -48,5 +50,25 @@ public class ApiPostController {
                                    @RequestParam(value = "limit") String limit,
                                    @RequestParam(value = "status") String status, Principal principal){
         return postService.getMyPosts(offset, limit, status, principal);
+    }
+
+    @PostMapping("/api/post")
+    @PreAuthorize("hasAuthority('user:write')")
+    public ContentAddResponse postAdd(@RequestBody PostAddRequest request, Principal principal){
+        return postService.postAdd(request, principal);
+    }
+
+    @PutMapping("/api/post/{id}")
+    @PreAuthorize("hasAuthority('user:write')")
+    public ContentAddResponse postPut(@RequestBody PostAddRequest request, @PathVariable String id, Principal principal){
+        return postService.postPut(request, id, principal);
+    }
+
+    @GetMapping(value = "/api/post/moderation")
+    @PreAuthorize("hasAuthority('user:moderate')")
+    public PostResponse postForModerate(@RequestParam(value = "offset") String offset,
+                                        @RequestParam(value = "limit") String limit,
+                                        @RequestParam(value = "status") String status){
+        return postService.getPostForModerate(offset, limit, status);
     }
 }
