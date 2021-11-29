@@ -1,15 +1,14 @@
 package main.model.response;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 import java.util.List;
 
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class PostResponse {
-    @Getter
-    @Setter
     private Integer count;
-    @Getter
-    @Setter
     private List<PostBodyResponse> posts;
 }

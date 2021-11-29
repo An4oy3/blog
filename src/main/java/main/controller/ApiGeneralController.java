@@ -3,6 +3,7 @@ package main.controller;
 import main.model.request.CommentRequest;
 import main.model.request.ModerationRequest;
 import main.model.request.ProfileChangeRequest;
+import main.model.request.ProfileDeletePhotoRequest;
 import main.model.response.*;
 import main.service.*;
 import org.springframework.http.ResponseEntity;
@@ -72,11 +73,15 @@ public class ApiGeneralController {
         return generalService.moderate(request, principal);
     }
 
-    @PostMapping(value = "/api/profile/my", consumes = {"multipart/form-data", "application/JSON"})
-    @ResponseBody
+    @PostMapping(value = "/api/profile/my")
     @PreAuthorize("hasAuthority('user:write')")
-    public ResponseEntity<?> profile(@RequestPart(name = "photo", required = false) MultipartFile photo, @RequestBody ProfileChangeRequest request, Principal principal) throws IOException {
-        return generalService.profile(request, photo, principal);
+    public ResponseEntity<?> profile(@ModelAttribute ProfileChangeRequest request, Principal principal) throws IOException {
+        return generalService.profile(request, principal);
     }
 
+    @PostMapping(value = "/api/profile/my", consumes = "application/json")
+    @PreAuthorize("hasAuthority('user:write')")
+    public ResponseEntity<?> profileDeletePhoto(@RequestBody ProfileDeletePhotoRequest request, Principal principal) throws IOException {
+        return generalService.profileDeletePhoto(request, principal);
+    }
 }

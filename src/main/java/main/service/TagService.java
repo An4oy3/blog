@@ -38,16 +38,12 @@ public class TagService {
         for (Tag currentTag : tagList) {
             double dWeightTag = (double) tag2PostRepository.findAllByTagId(currentTag.getId()).size()/postRepository.count();//Нормированный вес текущего тега(кол-во постов с данным тегом делим на общее кол-во постов)
             double weightTag = dWeightTag * k; //Получаем нормированый вес текущего тега
-
-            TagBodyResponse tagBodyResponse = new TagBodyResponse();
-            tagBodyResponse.setName(currentTag.getName());
-            tagBodyResponse.setWeight(weightTag);
-            resultList.add(tagBodyResponse);
+            resultList.add(TagBodyResponse.builder()
+                    .name(currentTag.getName())
+                    .weight(weightTag).build());
         }
-
-        TagResponse tagResponse = new TagResponse();
-        tagResponse.setTags(resultList);
-        return tagResponse;
+        return TagResponse.builder()
+                .tags(resultList).build();
     }
     private Tag getMostPopularTag(List<Tag> tags){
         if(tags.size() <= 0){

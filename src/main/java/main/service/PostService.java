@@ -1,11 +1,9 @@
 package main.service;
 
 import main.model.*;
-import main.model.repositories.PostRepository;
-import main.model.repositories.Tag2PostRepository;
-import main.model.repositories.TagRepository;
-import main.model.repositories.UserRepository;
+import main.model.repositories.*;
 import main.model.request.PostAddRequest;
+import main.model.request.PostVoteRequest;
 import main.model.response.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -18,6 +16,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.security.Principal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 
 @Service
@@ -26,12 +26,14 @@ public class PostService {
     private final TagRepository tagRepository;
     private final Tag2PostRepository tag2PostRepository;
     private final UserRepository userRepository;
+    private final PostVoteRepository postVoteRepository;
 
-    public PostService(PostRepository postRepository, TagRepository tagRepository, Tag2PostRepository tag2PostRepository, UserRepository userRepository) {
+    public PostService(PostRepository postRepository, TagRepository tagRepository, Tag2PostRepository tag2PostRepository, UserRepository userRepository, PostVoteRepository postVoteRepository) {
         this.postRepository = postRepository;
         this.tagRepository = tagRepository;
         this.tag2PostRepository = tag2PostRepository;
         this.userRepository = userRepository;
+        this.postVoteRepository = postVoteRepository;
     }
 
     //Этап 2. Метод GET /api/post
@@ -48,9 +50,10 @@ public class PostService {
         Pageable pageable = PageRequest.of(Integer.parseInt(offset), Integer.parseInt(limit), sort);
         Page<Post> list = postRepository.findAllPost(pageable);
         List<PostBodyResponse> posts = fillPostBodyResponseList(list);
-        return setPostResponseValue(posts);
+        return PostResponse.builder()
+                .count(posts.size())
+                .posts(posts).build();
     }
-    //====================================
 
     //GET /api/post/byTag
     public PostResponse getPostsByTag(String offset, String limit, String tagName){
@@ -58,10 +61,11 @@ public class PostService {
         Tag tag = tagRepository.findOneByName(tagName);
             List<Post> postsFromTag = tag.getPostList(); // Список постов по переданному тегу
             for (Post post : postsFromTag) {
-                PostBodyResponse postBodyResponse = fillPostBodyResponse(post);
-                posts.add(postBodyResponse);
+                posts.add(fillPostBodyResponse(post));
             }
-        return setPostResponseValue(posts);
+        return PostResponse.builder()
+                .count(posts.size())
+                .posts(posts).build();
     }
     //====================================
 
@@ -72,13 +76,14 @@ public class PostService {
 
         List<PostBodyResponse> postsResult = fillPostBodyResponseList(posts);
 
-        return setPostResponseValue(postsResult);
+        return PostResponse.builder()
+                .count(postsResult.size())
+                .posts(postsResult).build();
     }
     //====================================
 
     //GET /api/calendar
     public CalendarResponse getPostsByYear(String year){
-        CalendarResponse calendarResponse = new CalendarResponse();
         try {
             int y = Integer.parseInt(year);
         } catch (NumberFormatException e){
@@ -93,7 +98,7 @@ public class PostService {
         List<Integer> allYears = postRepository.findAllYears();
         Map<String, Integer> posts = new TreeMap<>();
         for (Object o : postsByYear) {
-            Object obj[] = (Object[]) o;
+            Object[] obj = (Object[]) o;
             try {
                 String date = obj[0].toString().substring(0, obj[0].toString().indexOf(" "));
                 Integer postsByDate = Integer.parseInt(obj[1].toString());
@@ -102,9 +107,10 @@ public class PostService {
                 e.printStackTrace();
             }
         }
-        calendarResponse.setPosts(posts);
-        calendarResponse.setYears(allYears);
-        return calendarResponse;
+        return CalendarResponse.builder()
+                .posts(posts)
+                .years(allYears)
+                .build();
     }
     //====================================
 
@@ -114,7 +120,9 @@ public class PostService {
         Page<Post> resultList = postRepository.findAllByTime(date, pageable);
         List<PostBodyResponse> posts = fillPostBodyResponseList(resultList);
 
-        return setPostResponseValue(posts);
+        return PostResponse.builder()
+                .count(posts.size())
+                .posts(posts).build();
     }
     //====================================
 
@@ -132,17 +140,15 @@ public class PostService {
 
         List<CommentBodyResponse> commentBodyResponses = new ArrayList<>();
         for (PostComment comment : post.getComments()) {
-            CommentBodyResponse commentBodyResponse = new CommentBodyResponse();
-            commentBodyResponse.setId(comment.getId());
-            commentBodyResponse.setText(comment.getText());
-            commentBodyResponse.setTimestamp(comment.getTime().getTime() / 1000);
-                UserBodyResponse userBodyResponse = new UserBodyResponse();
-                userBodyResponse.setId(comment.getUser().getId());
-                userBodyResponse.setName(comment.getUser().getName());
-                userBodyResponse.setPhoto(comment.getUser().getPhoto());
-            commentBodyResponse.setUser(userBodyResponse);
-
-            commentBodyResponses.add(commentBodyResponse);
+            commentBodyResponses.add(CommentBodyResponse.builder()
+                    .id(comment.getId())
+                    .text(comment.getText())
+                    .timestamp(comment.getTime().getTime() / 1000)
+                    .user(LoginResponse.UserBodyResponse.builder()
+                            .id(comment.getUser().getId())
+                            .name(comment.getUser().getName())
+                            .photo(comment.getUser().getPhoto()).build())
+                    .build());
         }
         postBodyResponse.setComments(commentBodyResponses);
 
@@ -166,37 +172,44 @@ public class PostService {
         String isActive = "1";
         String moderationStatus = "";
 
-        if(status.equals("inactive")){
-            isActive = "0";
-        } else if(status.equals("pending")){
-            moderationStatus = "NEW";
-        } else if(status.equals("declined")) {
-            moderationStatus = "DECLINED";
-        } else if(status.equals("published")){
-            moderationStatus = "ACCEPTED";
+        switch (status) {
+            case "inactive":
+                isActive = "0";
+                break;
+            case "pending":
+                moderationStatus = "NEW";
+                break;
+            case "declined":
+                moderationStatus = "DECLINED";
+                break;
+            case "published":
+                moderationStatus = "ACCEPTED";
+                break;
         }
         User user = userRepository.findOneByEmail(principal.getName());
 
         Page<Post> userPosts = moderationStatus.isEmpty() ? postRepository.findAllByUserId(user.getId(), isActive, pageable) : postRepository.findAllByUserId(user.getId(), isActive, moderationStatus, pageable);
         List<PostBodyResponse> result = fillPostBodyResponseList(userPosts);
 
-        return setPostResponseValue(result);
+        return PostResponse.builder()
+                .count(result.size())
+                .posts(result).build();
     }
     //====================================
 
     //POST api/post
     public ContentAddResponse postAdd(PostAddRequest request, Principal principal){
-        ContentAddResponse contentAddResponse = new ContentAddResponse();
-        ContentAddErrors errors = new ContentAddErrors();
         if(request.getText().length() < 50){
-            errors.setText("Текст публикации слишком короткий");
-            contentAddResponse.setErrors(errors);
-            return contentAddResponse;
+            return ContentAddResponse.builder()
+                    .errors(ContentAddErrors.builder()
+                            .text("Текст публикации слишком короткий").build())
+                    .build();
         }
         if(request.getTitle().length() < 3){
-            errors.setTitle("Заголовок не установлен");
-            contentAddResponse.setErrors(errors);
-            return contentAddResponse;
+            return ContentAddResponse.builder()
+                    .errors(ContentAddErrors.builder()
+                            .title("Заголовок не установлен").build())
+                    .build();
         }
         Post post = new Post();
         post.setIsActive((byte) request.getActive());
@@ -204,45 +217,29 @@ public class PostService {
         post.setText(request.getText());
         post.setTitle(request.getTitle());
         post.setTime(request.getTimestamp().before(new Date()) ? new Date() : request.getTimestamp());
-        post.setUserId(userRepository.findOneByEmail(principal.getName()));
+        post.setUser(userRepository.findOneByEmail(principal.getName()));
 
         post = postRepository.save(post);
 
-        for (String tagName : request.getTags()) {
-            Tag tag = tagRepository.findOneByName(tagName);
-            if(tag == null){
-                tag = new Tag();
-                tag.setName(tagName);
-                tag.setPostList(List.of(post));
-                tagRepository.save(tag);
-            } else {
-                List<Post> postList = tag.getPostList();
-                if(!postList.contains(post)) {
-                    postList.add(post);
-                    tag.setPostList(postList);
-                    tagRepository.save(tag);
-                }
-            }
-        }
-        contentAddResponse.setResult(true);
-
-        return contentAddResponse;
+        createTag(request, post);
+        return ContentAddResponse.builder().result(true).build();
     }
+
     //====================================
 
     //PUT api/post/{id}
     public ContentAddResponse postPut(PostAddRequest request, String id, Principal principal){
-        ContentAddResponse contentAddResponse = new ContentAddResponse();
-        ContentAddErrors errors = new ContentAddErrors();
         if(request.getText().length() < 50){
-            errors.setText("Текст публикации слишком короткий");
-            contentAddResponse.setErrors(errors);
-            return contentAddResponse;
+            return ContentAddResponse.builder()
+                    .errors(ContentAddErrors.builder()
+                            .text("Текст публикации слишком короткий").build())
+                    .build();
         }
         if(request.getTitle().length() < 3){
-            errors.setTitle("Заголовок не установлен");
-            contentAddResponse.setErrors(errors);
-            return contentAddResponse;
+            return ContentAddResponse.builder()
+                    .errors(ContentAddErrors.builder()
+                            .title("Заголовок не установлен").build())
+                    .build();
         }
         if(id.isEmpty() || Integer.parseInt(id) < 0 || Integer.parseInt(id) > postRepository.count()){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
@@ -252,31 +249,14 @@ public class PostService {
         post.setText(request.getText());
         post.setTitle(request.getTitle());
         post.setTime(request.getTimestamp().before(new Date()) ? new Date() : request.getTimestamp());
+
         if(userRepository.findOneByEmail(principal.getName()).getIsModerator() == 0){
             post.setModerationStatus(ModerationStatus.NEW);
         }
 
-        for (String tagName : request.getTags()) {
-            Tag tag = tagRepository.findOneByName(tagName);
-            if(tag == null){
-                tag = new Tag();
-                tag.setName(tagName);
-                tag.setPostList(List.of(post));
-                tagRepository.save(tag);
-            } else {
-                List<Post> postList = tag.getPostList();
-                if(!postList.contains(post)) {
-                    postList.add(post);
-                    tag.setPostList(postList);
-                    tagRepository.save(tag);
-                }
-            }
-        }
+        createTag(request, post);
         postRepository.save(post);
-        contentAddResponse.setResult(true);
-
-
-        return contentAddResponse;
+        return ContentAddResponse.builder().result(true).build();
     }
     //====================================
 
@@ -288,56 +268,115 @@ public class PostService {
         Page<Post> posts = postRepository.findAllForModerate(moderationStatus, pageable);
         List<PostBodyResponse> result = fillPostBodyResponseList(posts);
 
-        return setPostResponseValue(result);
+        return PostResponse.builder()
+                .count(result.size())
+                .posts(result).build();
+    }
+
+    //POST api/post/like
+    public PostVoteResponse like(PostVoteRequest request, Principal principal) {
+        Post post = postRepository.findById(request.getPostId()).orElse(null);
+        if(post == null){
+            return PostVoteResponse.builder().result(false).build();
+        }
+        User currentUser = userRepository.findOneByEmail(principal.getName());
+        PostVote postVote = postVoteRepository.findByPostAndAndUser(post, currentUser).orElse(null);
+        if(postVote == null){
+            postVote = new PostVote();
+            postVote.setPost(post);
+            postVote.setTime(new Date());
+            postVote.setUser(currentUser);
+            postVote.setValue((byte) 1);
+            return PostVoteResponse.builder().result(true).build();
+        } else if(postVote.getValue() == 1){
+            return PostVoteResponse.builder().result(false).build();
+        } else {
+            postVote.setValue((byte) 1);
+            postVoteRepository.save(postVote);
+            return PostVoteResponse.builder().result(true).build();
+        }
+    }
+
+    public PostVoteResponse dislike(PostVoteRequest request, Principal principal) {
+        Post post = postRepository.findById(request.getPostId()).orElse(null);
+        if(post == null){
+            return PostVoteResponse.builder().result(false).build();
+        }
+        User currentUser = userRepository.findOneByEmail(principal.getName());
+        PostVote postVote = postVoteRepository.findByPostAndAndUser(post, currentUser).orElse(null);
+
+        if(postVote == null){
+            postVote = new PostVote();
+            postVote.setPost(post);
+            postVote.setTime(new Date());
+            postVote.setUser(currentUser);
+            postVote.setValue((byte) -1);
+            return PostVoteResponse.builder().result(true).build();
+        } else if(postVote.getValue() == -1){
+            return PostVoteResponse.builder().result(false).build();
+        } else {
+            postVote.setValue((byte) -1);
+            postVoteRepository.save(postVote);
+            return PostVoteResponse.builder().result(true).build();
+        }
     }
 
 
 
     //методы для заполнения обьектов
+    private void createTag(PostAddRequest request, Post post) {
+        for (String tagName : request.getTags()) {
+            Tag tag = tagRepository.findOneByName(tagName);
+            if(tag == null){
+                tag = new Tag();
+                tag.setName(tagName);
+                tag.setPostList(List.of(post));
+                tagRepository.save(tag);
+            } else {
+                List<Post> postList = tag.getPostList();
+                if(!postList.contains(post)) {
+                    postList.add(post);
+                    tag.setPostList(postList);
+                    tagRepository.save(tag);
+                }
+            }
+        }
+    }
+
+
     private PostBodyResponse fillPostBodyResponse(Post post){
         List<PostVote> postVotePage = post.getVotes(); // //Получаем список оценок(лайки/дизлайки) к текущему посту, без использования дополнительного репозитория
         int likeCount = 0;
         int dislikeCount = 0;
         for (PostVote postVote : postVotePage) {
-            if(postVote.getValue() == 1){ //Если значение поля 1 - то это лайк, если -1, то дизлайк
-                likeCount++;
-            } else {
+            if(postVote.getValue() == 1)
+                likeCount++;//Если значение поля 1 - то это лайк, если -1, то дизлайк
+             else
                 dislikeCount++;
-            }
         }
-        PostBodyResponse postBodyResponse = new PostBodyResponse(); //Создаем обьект, который состоит из тех полей, которые front может обработать и инициализируем их все
-        UserBodyResponse userBodyResponse = new UserBodyResponse(); //Одно из полей обьекта PostBodyResponse - это отдельный обьект с полями юзера
-        userBodyResponse.setId(post.getUserId().getId());
-        userBodyResponse.setName(post.getUserId().getName());
-        postBodyResponse.setId(post.getId());
-        postBodyResponse.setTimestamp(post.getTime().getTime()/1000);
-        postBodyResponse.setUser(userBodyResponse);
-        postBodyResponse.setTitle(post.getTitle());
-        String announce = post.getText().length() >= 150 ? post.getText().substring(0, 150) + " ..." : post.getText();
-        postBodyResponse.setAnnounce(removerTags(announce));
-        postBodyResponse.setLikeCount(likeCount);
-        postBodyResponse.setDislikeCount(dislikeCount);
-        postBodyResponse.setCommentCount(post.getComments().size());
-        postBodyResponse.setViewCount(post.getViewCount());
-        postBodyResponse.setActive(post.getIsActive() == 1);
-        postBodyResponse.setText(post.getText());
-        return postBodyResponse;
+        return PostBodyResponse.builder()
+                .user(LoginResponse.UserBodyResponse.builder()
+                        .id(post.getUser().getId())
+                        .name(post.getUser().getName())
+                        .build())
+                .id(post.getId())
+                .timestamp(post.getTime().getTime()/1000)
+                .title(post.getTitle())
+                .announce(removerTags(post.getText().length() >= 150 ? post.getText().substring(0, 150) + " ..." : post.getText()))
+                .likeCount(likeCount)
+                .dislikeCount(dislikeCount)
+                .commentCount(post.getComments().size())
+                .viewCount(post.getViewCount())
+                .active(post.getIsActive() == 1)
+                .text(post.getText()).build();
     }
 
     private List<PostBodyResponse> fillPostBodyResponseList(Page<Post> posts){
         List<PostBodyResponse> postBodyResponseList = new ArrayList<>();
         for (Post post : posts) {
-            PostBodyResponse postBodyResponse = fillPostBodyResponse(post);
-            postBodyResponseList.add(postBodyResponse);
+            postBodyResponseList.add(fillPostBodyResponse(post));
         }
         return postBodyResponseList;
-    }
-
-    private PostResponse setPostResponseValue(List<PostBodyResponse> postBodyResponses){
-        PostResponse postResponse = new PostResponse();
-        postResponse.setCount(postBodyResponses.size());
-        postResponse.setPosts(postBodyResponses);
-        return postResponse;
     }
 
     private String removerTags(String html) {

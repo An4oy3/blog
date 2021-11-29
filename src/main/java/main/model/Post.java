@@ -41,7 +41,7 @@ public class Post {
     @NonNull
     @ManyToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "user_id")
-    private User userId;
+    private User user;
 
     @Getter
     @Setter

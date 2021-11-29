@@ -7,9 +7,9 @@ import lombok.NoArgsConstructor;
 
 @Data
 @Builder
-@AllArgsConstructor
 @NoArgsConstructor
-public class ContentAddResponse {
+@AllArgsConstructor
+public class RestorePassResponse {
     private boolean result;
-    private ContentAddErrors errors;
+    private RegisterErrors errors;
 }
