@@ -1,9 +1,8 @@
 package main.controller;
 
 import main.model.request.PostAddRequest;
-import main.model.response.ContentAddResponse;
-import main.model.response.PostBodyResponse;
-import main.model.response.PostResponse;
+import main.model.request.PostVoteRequest;
+import main.model.response.*;
 import main.service.PostService;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -70,5 +69,17 @@ public class ApiPostController {
                                         @RequestParam(value = "limit") String limit,
                                         @RequestParam(value = "status") String status){
         return postService.getPostForModerate(offset, limit, status);
+    }
+
+    @PostMapping(value = "/api/post/like")
+    @PreAuthorize("hasAuthority('user:write')")
+    public PostVoteResponse like(@RequestBody PostVoteRequest request, Principal principal){
+        return postService.like(request, principal);
+    }
+
+    @PostMapping(value = "/api/post/dislike")
+    @PreAuthorize("hasAuthority('user:write')")
+    public PostVoteResponse dislike(@RequestBody PostVoteRequest request, Principal principal){
+        return postService.dislike(request, principal);
     }
 }

@@ -4,10 +4,10 @@ import lombok.Data;
 import org.springframework.web.multipart.MultipartFile;
 
 @Data
-public class ProfileChangeRequest {
-    private MultipartFile photo;
+public class ProfileDeletePhotoRequest {
+    private String photo;
+    private String password;
     private String name;
     private String email;
-    private String password;
     private Integer removePhoto;
 }

@@ -2,9 +2,11 @@ package main.controller;
 
 import main.model.request.LoginRequest;
 import main.model.request.RegisterRequest;
+import main.model.request.RestorePassRequest;
 import main.model.response.CaptchaResponse;
 import main.model.response.LoginResponse;
 import main.model.response.RegisterResponse;
+import main.model.response.RestorePassResponse;
 import main.service.AuthService;
 import main.service.CaptchaService;
 import main.service.RegisterService;
@@ -53,6 +55,16 @@ public class ApiAuthController {
     @PreAuthorize("hasAuthority('user:write')")
     public LoginResponse logout(Principal principal){
         return authService.logout(principal);
+    }
+
+    @PostMapping("/api/auth/restore")
+    public RestorePassResponse restore(@RequestBody RestorePassRequest request){
+        return authService.restore(request);
+    }
+
+    @PostMapping("/api/auth/password")
+    public RestorePassResponse password(@RequestBody RestorePassRequest request){
+        return authService.password(request);
     }
 
 }

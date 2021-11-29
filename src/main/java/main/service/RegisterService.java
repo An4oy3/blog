@@ -12,7 +12,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@Transactional
 public class RegisterService {
     private final UserRepository userRepository;
     private final CaptchaRepository captchaRepository;
@@ -24,22 +23,23 @@ public class RegisterService {
 
     //GET "/api/auth/register"
     public RegisterResponse register(RegisterRequest request){
-        RegisterResponse response = new RegisterResponse();
-        RegisterErrors errors = new RegisterErrors();
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
 
         CaptchaCodes captchaCode = captchaRepository.findOneBySecretCode(request.getCaptcha_secret());
         if(!captchaCode.getCode().equalsIgnoreCase(request.getCaptcha())){
-            response.setResult(false);
-            errors.setCaptcha("Код с картинки введён неверно");
-            response.setErrors(errors);
-            return response;
+            return RegisterResponse.builder()
+                    .result(false)
+                    .errors(RegisterErrors.builder()
+                            .captcha("Код с картинки введён неверно").build())
+                    .build();
         }
         if(!request.getName().matches("[А-Яа-яA-Za-z]+")){
-            response.setResult(false);
-            errors.setName("Имя указано неверно");
-            response.setErrors(errors);
-            return response;
+            return RegisterResponse.builder()
+                    .result(false)
+                    .errors(RegisterErrors.builder()
+                            .name("Имя указано неверно")
+                            .build())
+                    .build();
         }
         User user = userRepository.findOneByEmail(request.getEmail());
         if(user == null){
@@ -48,13 +48,13 @@ public class RegisterService {
             user.setEmail(request.getEmail());
             user.setPassword(encoder.encode(request.getPassword()));
             userRepository.addUser(user.getEmail(), user.getName(), user.getPassword());
-            response.setResult(true);
-            return response;
+            return RegisterResponse.builder().result(true).build();
         } else {
-            response.setResult(false);
-            errors.setEmail("Этот e-mail уже зарегистрирован");
-            response.setErrors(errors);
-            return response;
+            return RegisterResponse.builder()
+                    .result(false)
+                    .errors(RegisterErrors.builder()
+                            .email("Этот e-mail уже зарегистрирован").build())
+                    .build();
         }
     }
     //====================================

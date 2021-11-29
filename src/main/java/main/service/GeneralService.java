@@ -10,17 +10,20 @@ import main.model.repositories.UserRepository;
 import main.model.request.CommentRequest;
 import main.model.request.ModerationRequest;
 import main.model.request.ProfileChangeRequest;
+import main.model.request.ProfileDeletePhotoRequest;
 import main.model.response.ContentAddErrors;
 import main.model.response.ContentAddResponse;
-import org.imgscalr.Scalr;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.Principal;
 import java.util.Date;
 import java.util.UUID;
@@ -40,11 +43,10 @@ public class GeneralService {
     //POST "/api/image/"
     public ResponseEntity<Object> image(MultipartFile file) throws IOException {
         if(((double)file.getSize()/(1024*1024)) > 3.0 || !(getFileExtension(file).equals(".jpg") || getFileExtension(file).equals(".png"))){
-            ContentAddResponse response = new ContentAddResponse();
-            ContentAddErrors error = new ContentAddErrors();
-            error.setImage("Размер файла превышает допустимый размер и/или файл неверного формата");
-            response.setErrors(error);
-            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(ContentAddResponse.builder()
+                    .errors(ContentAddErrors.builder()
+                            .image("Размер файла превышает допустимый размер и/или файл неверного формата").build())
+                    .build(), HttpStatus.BAD_REQUEST);
         }
 
         File filePath = new File("src/main/resources/upload/1/" + UUID.randomUUID().toString().substring(5) + getFileExtension(file));
@@ -58,11 +60,9 @@ public class GeneralService {
     //POST "/api/comment"
     public ResponseEntity<Object> comment(CommentRequest request, Principal principal){
         if(request.getText().length() < 2){
-            ContentAddErrors error = new ContentAddErrors();
-            error.setText("Текст комментария не задан или слишком короткий");
-            ContentAddResponse response = new ContentAddResponse();
-            response.setErrors(error);
-            return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(ContentAddResponse.builder()
+                    .errors(ContentAddErrors.builder().text("Текст комментария не задан или слишком короткий").build())
+                    .build(), HttpStatus.BAD_REQUEST);
         }
 
         int postId = Integer.parseInt(request.getPostId());
@@ -97,51 +97,75 @@ public class GeneralService {
     }
 
     //POST "/api/profile/my"
-    public ResponseEntity<?> profile(ProfileChangeRequest request, MultipartFile photo, Principal principal) throws IOException {
+    public ResponseEntity<?> profile(ProfileChangeRequest request, Principal principal) throws IOException {
         User user = userRepository.findOneByEmail(principal.getName());
-        ContentAddResponse response = new ContentAddResponse();
-        ContentAddErrors errors = new ContentAddErrors();
-        if(photo != null && (double)photo.getSize()/(1024*1024) > 5.0){
-            response.setResult(false);
-            errors.setPhoto("Фото слишком большое, нужно не более 5 Мб");
-            response.setErrors(errors);
-            return ResponseEntity.ok(response);
+
+        if(request.getPassword() != null && request.getPassword().length() < 6 && !request.getPassword().isEmpty()){
+        return ResponseEntity.ok(ContentAddResponse.builder()
+                .errors(ContentAddErrors.builder().password("Пароль короче 6-ти символов").build())
+                .build());
+        }
+
+        if(request.getName() != null && !request.getName().matches("[А-Яа-яA-Za-z]+")) {
+        return ResponseEntity.ok(ContentAddResponse.builder()
+                .errors(ContentAddErrors.builder().name("Имя указано неверно").build())
+                .build());
         }
         if(userRepository.findOneByEmail(request.getEmail()) != null && !request.getEmail().equals(user.getEmail())){
-            response.setResult(false);
-            errors.setEmail("Этот e-mail уже зарегистрирован");
-            response.setErrors(errors);
-            return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ContentAddResponse.builder()
+                .errors(ContentAddErrors.builder().email("Этот e-mail уже зарегистрирован").build())
+                .build());
         }
-        if(!request.getName().matches("[А-Яа-яA-Za-z]+")) {
-            response.setResult(false);
-            errors.setName("Имя указано неверно");
-            response.setErrors(errors);
-            return ResponseEntity.ok(response);
-        }
-        if(request.getPassword() != null && request.getPassword().length() < 6 && !request.getPassword().isEmpty()){
-            response.setResult(false);
-            errors.setPassword("Пароль короче 6-ти символов");
-            response.setErrors(errors);
-            return ResponseEntity.ok(response);
+        if(request.getPhoto() != null){
+            BufferedImage photo = ImageIO.read(request.getPhoto().getInputStream());
+            photo = photo.getSubimage(36, 36, 36, 36);
+            File filePath = new File("src/main/resources/upload/1/" + UUID.randomUUID().toString().substring(5) + getFileExtension(request.getPhoto()));
+            ImageIO.write(photo, "png", filePath);
+            user.setPhoto(filePath.getPath());
         }
 
         user.setName(request.getName() == null ? user.getName() : request.getName());
         user.setEmail(request.getEmail() == null ? user.getEmail() : request.getEmail());
         user.setPassword(request.getPassword() == null ? user.getPassword() : new BCryptPasswordEncoder().encode(request.getPassword()));
 
-        if(photo != null) {
-            File filePath = new File("src/main/resources/upload/1/" + UUID.randomUUID().toString().substring(5) + getFileExtension(photo));
-            OutputStream os = new FileOutputStream(filePath);
-            os.write(photo.getBytes());
-            os.close();
-            user.setPhoto(filePath.getPath());
-        }
         userRepository.save(user);
-        response.setResult(true);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ContentAddResponse.builder()
+                .result(true).build());
     }
     //====================================
+
+    public ResponseEntity<?> profileDeletePhoto(ProfileDeletePhotoRequest request, Principal principal) throws IOException {
+        User user = userRepository.findOneByEmail(principal.getName());
+        if(request.getRemovePhoto() != null && request.getRemovePhoto() == 1){
+            Files.delete(Path.of(user.getPhoto()));
+            userRepository.deletePhoto(user.getId());
+        }
+        if(request.getPassword() != null && request.getPassword().length() < 6 && !request.getPassword().isEmpty()){
+            return ResponseEntity.ok(ContentAddResponse.builder()
+                    .errors(ContentAddErrors.builder().password("Пароль короче 6-ти символов").build())
+                    .build());
+        }
+        if(request.getEmail() != null && userRepository.findOneByEmail(request.getEmail()) != null && !request.getEmail().equals(user.getEmail())){
+            return ResponseEntity.ok(ContentAddResponse.builder()
+                    .errors(ContentAddErrors.builder().email("Этот e-mail уже зарегистрирован").build())
+                    .build());
+        }
+
+        if(request.getName() != null && !request.getName().matches("[А-Яа-яA-Za-z]+")) {
+            return ResponseEntity.ok(ContentAddResponse.builder()
+                    .errors(ContentAddErrors.builder().name("Имя указано неверно").build())
+                    .build());
+        }
+
+
+        user.setEmail(request.getEmail() == null ? user.getEmail() : request.getEmail());
+        user.setName(request.getName() == null ? user.getName() : request.getName());
+        user.setPassword(request.getPassword() == null ? user.getPassword() : new BCryptPasswordEncoder().encode(request.getPassword()));
+
+        userRepository.save(user);
+        return ResponseEntity.ok(ContentAddResponse.builder()
+                .result(true).build());
+    }
 
 
     private String getFileExtension(MultipartFile file){
@@ -154,7 +178,6 @@ public class GeneralService {
         }
         return "";
     }
-
 
 
 }

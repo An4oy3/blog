@@ -1,4 +1,12 @@
+Srver:
+  port: 8088
 spring:
+  mail.host: smtp.gmail.com
+  mail.port: 587
+  mail.username: sinevichblogstudymail@gmail.com
+  mail.password: bpbxaazayufedrhv
+  mail.properties.mail.smtp.auth: true
+  mail.properties.mail.smtp.starttls.enable: true
   datasource:
     url: jdbc:mysql://localhost:3306/blogengine
     username: root
