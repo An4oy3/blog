@@ -11,7 +11,8 @@ import lombok.NoArgsConstructor;
 public class RestorePassRequest {
     private String email;
     private String password;
-    private String code;
+    @JsonProperty("code")
+    private String token;
     private String captcha;
     @JsonProperty("captcha_secret")
     private String captchaSecret;

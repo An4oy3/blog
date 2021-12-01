@@ -9,12 +9,15 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 @Transactional
 public interface UserRepository extends JpaRepository<User, Integer> {
     @Query(value = "select u FROM User u WHERE u.email = :email")
     User findOneByEmail(@Param("email") String email);
+
+    Optional<User> findByCode(String code);
 
     @Modifying
     @Query(value = "update User u set u.photo = null where u.id = :userId")
