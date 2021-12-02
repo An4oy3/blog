@@ -84,4 +84,15 @@ public class ApiGeneralController {
     public ResponseEntity<?> profileDeletePhoto(@RequestBody ProfileDeletePhotoRequest request, Principal principal) throws IOException {
         return generalService.profileDeletePhoto(request, principal);
     }
+
+    @GetMapping("/api/statistics/my")
+    @PreAuthorize("hasAuthority('user:write')")
+    public StatisticResponse userStatistic(Principal principal){
+        return generalService.userStatistic(principal);
+    }
+
+    @GetMapping("/api/statistics/all")
+    public ResponseEntity blogStatistic(Principal principal){
+        return generalService.blogStatistic(principal);
+    }
 }

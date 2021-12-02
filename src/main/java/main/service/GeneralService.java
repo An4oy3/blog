@@ -1,18 +1,14 @@
 package main.service;
 
-import main.model.ModerationStatus;
-import main.model.Post;
-import main.model.PostComment;
-import main.model.User;
-import main.model.repositories.PostCommentRepository;
-import main.model.repositories.PostRepository;
-import main.model.repositories.UserRepository;
+import main.model.*;
+import main.model.repositories.*;
 import main.model.request.CommentRequest;
 import main.model.request.ModerationRequest;
 import main.model.request.ProfileChangeRequest;
 import main.model.request.ProfileDeletePhotoRequest;
 import main.model.response.ContentAddErrors;
 import main.model.response.ContentAddResponse;
+import main.model.response.StatisticResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -25,19 +21,23 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.Principal;
-import java.util.Date;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class GeneralService {
     private final PostRepository postRepository;
     private final PostCommentRepository postCommentRepository;
     private final UserRepository userRepository;
+    private final GlobalSettingsRepository globalSettingsRepository;
+    private final PostVoteRepository postVoteRepository;
 
-    public GeneralService(PostRepository postRepository, PostCommentRepository postCommentRepository, UserRepository userRepository) {
+    public GeneralService(PostRepository postRepository, PostCommentRepository postCommentRepository, UserRepository userRepository, GlobalSettingsRepository globalSettingsRepository, PostVoteRepository postVoteRepository) {
         this.postRepository = postRepository;
         this.postCommentRepository = postCommentRepository;
         this.userRepository = userRepository;
+        this.globalSettingsRepository = globalSettingsRepository;
+        this.postVoteRepository = postVoteRepository;
     }
 
     //POST "/api/image/"
@@ -180,4 +180,43 @@ public class GeneralService {
     }
 
 
+    public StatisticResponse userStatistic(Principal principal) {
+        User user = userRepository.findOneByEmail(principal.getName());
+        List<Post> posts = postRepository.findAllByUser(user);
+        List<PostVote> likes = new ArrayList<>();
+        List<PostVote> dislikes = new ArrayList<>();
+        posts.forEach(post -> {
+            likes.addAll(post.getVotes().stream().filter(postVote -> postVote.getValue() == 1).collect(Collectors.toList()));
+            dislikes.addAll(post.getVotes().stream().filter(postVote -> postVote.getValue() == -1).collect(Collectors.toList()));
+        });
+
+        return StatisticResponse.builder()
+                .postsCount(posts.size())
+                .likesCount(likes.size())
+                .dislikesCount(dislikes.size())
+                .viewsCount(posts.stream().mapToLong(Post::getViewCount).sum())
+                .firstPublication(posts.stream().min((o1, o2) -> o1.getTime().compareTo(o2.getTime())).get().getTime().getTime()/1000)
+                .build();
+
+    }
+
+    public ResponseEntity blogStatistic(Principal principal) {
+        GlobalSetting setting = globalSettingsRepository.findByCode("STATISTICS_IS_PUBLIC");
+        User user = userRepository.findOneByEmail(principal != null ? principal.getName() : "");
+        if(setting.getValue().equals("NO") && user != null && user.getIsModerator() == 0){
+            return new ResponseEntity(HttpStatus.UNAUTHORIZED);
+        }
+
+        List<Post> posts = postRepository.findAll();
+        List<PostVote> postVotes = postVoteRepository.findAll();
+        List<PostVote> likes = postVotes.stream().filter(postVote -> postVote.getValue() == 1).collect(Collectors.toList());
+        List<PostVote> dislikes = postVotes.stream().filter(postVote -> postVote.getValue() == -1).collect(Collectors.toList());
+
+        return ResponseEntity.ok(StatisticResponse.builder().postsCount(posts.size())
+                .likesCount(likes.size())
+                .dislikesCount(dislikes.size())
+                .viewsCount(posts.stream().mapToLong(Post::getViewCount).sum())
+                .firstPublication(posts.stream().min((o1, o2) -> o1.getTime().compareTo(o2.getTime())).get().getTime().getTime()/1000)
+                .build());
+    }
 }

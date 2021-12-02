@@ -1,11 +1,10 @@
 package main.model.repositories;
 
-import main.model.GlobalSettings;
+import main.model.GlobalSetting;
 import org.springframework.data.repository.PagingAndSortingRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-
 @Repository
-public interface GlobalSettingsRepository extends PagingAndSortingRepository<GlobalSettings, Integer> {
+public interface GlobalSettingsRepository extends PagingAndSortingRepository<GlobalSetting, Integer> {
+    GlobalSetting findByCode(String code);
 }
