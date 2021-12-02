@@ -1,6 +1,6 @@
 package main.service;
 
-import main.model.GlobalSettings;
+import main.model.GlobalSetting;
 import main.model.repositories.GlobalSettingsRepository;
 import main.model.response.SettingsResponse;
 import org.springframework.stereotype.Service;
@@ -15,14 +15,14 @@ public class SettingsService {
 
     public SettingsResponse getGlobalSettings(){
         SettingsResponse settingsResponse = new SettingsResponse();
-        Iterable<GlobalSettings> iterable = globalSettingsRepository.findAll();
-        for (GlobalSettings globalSettings : iterable) {
-            boolean value = globalSettings.getValue().equals("YES");
-            if(globalSettings.getCode().equals("MULTIUSER_MODE"))
+        Iterable<GlobalSetting> iterable = globalSettingsRepository.findAll();
+        for (GlobalSetting globalSetting : iterable) {
+            boolean value = globalSetting.getValue().equals("YES");
+            if(globalSetting.getCode().equals("MULTIUSER_MODE"))
                 settingsResponse.setMultiuserMode(value);
-            else if(globalSettings.getCode().equals("POST_PREMODERATION"))
+            else if(globalSetting.getCode().equals("POST_PREMODERATION"))
                 settingsResponse.setPostPremoderation(value);
-            else if(globalSettings.getCode().equals("STATISTICS_IS_PUBLIC"))
+            else if(globalSetting.getCode().equals("STATISTICS_IS_PUBLIC"))
                 settingsResponse.setStatisticIsPublic(value);
         }
         return settingsResponse;
