@@ -195,7 +195,7 @@ public class GeneralService {
                 .likesCount(likes.size())
                 .dislikesCount(dislikes.size())
                 .viewsCount(posts.stream().mapToLong(Post::getViewCount).sum())
-                .firstPublication(posts.stream().min((o1, o2) -> o1.getTime().compareTo(o2.getTime())).get().getTime().getTime()/1000)
+                .firstPublication(posts.stream().min(Comparator.comparing(Post::getTime)).get().getTime().getTime()/1000)
                 .build();
 
     }
@@ -216,7 +216,7 @@ public class GeneralService {
                 .likesCount(likes.size())
                 .dislikesCount(dislikes.size())
                 .viewsCount(posts.stream().mapToLong(Post::getViewCount).sum())
-                .firstPublication(posts.stream().min((o1, o2) -> o1.getTime().compareTo(o2.getTime())).get().getTime().getTime()/1000)
+                .firstPublication(posts.stream().min(Comparator.comparing(Post::getTime)).get().getTime().getTime()/1000)
                 .build());
     }
 }

@@ -123,6 +123,7 @@ public class AuthService {
     }
 
     public RestorePassResponse password(RestorePassRequest request) {
+        main.model.User user = userRepository.findByCode(request.getToken()).orElseThrow(()-> new UsernameNotFoundException("User not found"));
         CaptchaCodes captcha = captchaRepository.findOneBySecretCode(request.getCaptchaSecret());
         if(captcha == null || !captcha.getCode().equals(request.getCaptcha())){
             return RestorePassResponse.builder().result(false)
@@ -132,14 +133,16 @@ public class AuthService {
         }
         Date validityToken = new Date(UUID.fromString(request.getToken()).timestamp() + 600000);
 
-        if(validityToken.before(new Date())){
+        if(validityToken.after(new Date())){
+            UUID token = Generators.timeBasedGenerator().generate();
+            user.setCode(token.toString());
+            userRepository.save(user);
             return RestorePassResponse.builder().result(false)
                     .errors(RegisterErrors.builder().code("Ссылка для восстановления пароля устарела.\n" +
-                            "        <a href=\n" +
-                            "        http://127.0.0.1:8080/auth/restore>Запросить ссылку снова</a>").build())
+                            "        <a href=" +
+                            "        http://127.0.0.1:8080/login/change-password/" + token + ">Запросить ссылку снова</a>").build())
                     .build();
         }
-        main.model.User user = userRepository.findByCode(request.getToken()).orElseThrow(()-> new UsernameNotFoundException("User not found"));
         user.setPassword(encoder.encode(request.getPassword()));
         userRepository.save(user);
         return RestorePassResponse.builder().result(true).build();
